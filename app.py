@@ -1,4 +1,1 @@
-import streamlit as st
-
-st.title("RxShield")
-st.write("التطبيق يعمل بنجاح!")
+404 page not found
