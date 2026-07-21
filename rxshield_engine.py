@@ -1,4 +1,10 @@
 # ==========================================================
+# Imports
+# ==========================================================
+
+from database import *
+
+# ==========================================================
 # Interaction Lookup
 # ==========================================================
 
@@ -53,13 +59,18 @@ def get_clinical_metadata(interaction_text):
 def rxshield_engine(drug1_name, drug2_name):
 
     drug1_id = resolve_drug(drug1_name)
-    drug2_id = resolve_drug(drug2_name)
-
     if drug1_id is None:
-        return {"error": f"Drug not found: {drug1_name}"}
+        return {
+            "success": False,
+            "error": f"Drug not found: {drug1_name}"
+        }
 
+    drug2_id = resolve_drug(drug2_name)
     if drug2_id is None:
-        return {"error": f"Drug not found: {drug2_name}"}
+        return {
+            "success": False,
+            "error": f"Drug not found: {drug2_name}"
+        }
 
     drug1 = drug_registry[drug1_id]
     drug2 = drug_registry[drug2_id]
@@ -68,9 +79,10 @@ def rxshield_engine(drug1_name, drug2_name):
 
     if not interactions:
         return {
+            "success": True,
+            "interaction_found": False,
             "drug1": drug1,
-            "drug2": drug2,
-            "interaction_found": False
+            "drug2": drug2
         }
 
     interaction = interactions[0]
@@ -78,6 +90,7 @@ def rxshield_engine(drug1_name, drug2_name):
     metadata = get_clinical_metadata(interaction["interaction"])
 
     return {
+        "success": True,
         "interaction_found": True,
         "drug1": drug1,
         "drug2": drug2,
