@@ -1,5 +1,36 @@
+import json
+import pandas as pd
+from collections import defaultdict
+from tqdm import tqdm
+from lxml import etree
+
 # ==========================================================
-# RxShield Drug Registry
+# PATHS
+# ==========================================================
+
+DRUG_INFO_PATH = "drug_info.json"
+SYNONYMS_PATH = "drugs_synonyms.json"
+INTERACTION_PATH = "all_id_interaction.csv"
+LABEL_PATH = "interaction_counts_4.xlsx"
+
+# إذا كان لديك ملف XML ضعه بنفس الاسم داخل المشروع
+XML_PATH = "full database.xml"
+
+# ==========================================================
+# LOAD FILES
+# ==========================================================
+
+with open(DRUG_INFO_PATH, "r", encoding="utf-8") as f:
+    drug_info = json.load(f)
+
+with open(SYNONYMS_PATH, "r", encoding="utf-8") as f:
+    drug_synonyms = json.load(f)
+
+interaction_df = pd.read_csv(INTERACTION_PATH)
+label_df = pd.read_excel(LABEL_PATH)
+
+# ==========================================================
+# Drug Registry
 # ==========================================================
 
 drug_registry = {}
@@ -9,51 +40,36 @@ for drug_id, info in drug_info.items():
     drug_registry[drug_id] = {
 
         "id": drug_id,
-
         "name": info.get("name"),
-
         "description": info.get("description"),
-
         "formula": info.get("formula"),
-
         "smiles": info.get("smiles"),
-
         "synonyms": drug_synonyms.get(drug_id, [])
 
     }
 
-print("=" * 60)
-print("Drug Registry:", len(drug_registry))
-print("=" * 60)
-
-sample = next(iter(drug_registry))
-print(drug_registry[sample])from collections import defaultdict
+# ==========================================================
+# Search Index
+# ==========================================================
 
 search_index = defaultdict(set)
 
 for drug_id, drug in drug_registry.items():
 
-    # الاسم الأساسي
     if drug["name"]:
         search_index[drug["name"].lower()].add(drug_id)
 
-    # المرادفات
     for syn in drug["synonyms"]:
         if syn:
             search_index[syn.lower()].add(drug_id)
 
-print("=" * 60)
-print("Search Index:", len(search_index))
-print("=" * 60)
-
-# اختبار
-print(search_index["warfarin"])lections import defaultdict
-from tqdm import tqdm
-import pandas as pd
+# ==========================================================
+# DDI Lookup
+# ==========================================================
 
 ddi_lookup = defaultdict(list)
 
-for _, row in tqdm(interaction_df.iterrows(), total=len(interaction_df)):
+for _, row in interaction_df.iterrows():
 
     key = frozenset([
         row["Drug1"].replace("Compound::", ""),
@@ -65,47 +81,54 @@ for _, row in tqdm(interaction_df.iterrows(), total=len(interaction_df)):
         "drug1": row["Drug1"].replace("Compound::", ""),
         "drug2": row["Drug2"].replace("Compound::", ""),
         "interaction": row["Interaction"],
-        "adverse_effects": (
+        "adverse_effects":
             None if pd.isna(row["Adverse Effects"])
             else row["Adverse Effects"]
-        )
 
     })
 
-print("=" * 60)
-print("DDI Lookup:", len(ddi_lookup))
-print("=" * 60)from tqdm import tqdm
+# ==========================================================
+# Food Interactions
+# ==========================================================
 
 food_interactions = {}
 
-for drug in tqdm(drugs):
+try:
 
-    # DrugBank ID
-    ids = drug.xpath('./*[local-name()="drugbank-id"][@primary="true"]')
-    if not ids:
-        continue
+    parser = etree.XMLParser(remove_blank_text=True, huge_tree=True)
 
-    drug_id = ids[0].text
+    tree = etree.parse(XML_PATH, parser)
 
-    # Drug name
-    names = drug.xpath('./*[local-name()="name"]')
-    drug_name = names[0].text if names else None
+    root = tree.getroot()
 
-    # Food interactions
-    foods = drug.xpath('./*[local-name()="food-interactions"]/*[local-name()="food-interaction"]')
+    drugs = root.xpath('./*[local-name()="drug"]')
 
-    food_list = []
+    for drug in drugs:
 
-    for food in foods:
-        if food.text:
-            food_list.append(food.text.strip())
+        ids = drug.xpath('./*[local-name()="drugbank-id"][@primary="true"]')
 
-    if food_list:
-        food_interactions[drug_id] = {
-            "drug_name": drug_name,
-            "food_interactions": food_list
-        }
+        if not ids:
+            continue
 
-print("=" * 60)
-print("Drugs with food interactions:", len(food_interactions))
-print("=" * 60)
+        drug_id = ids[0].text
+
+        names = drug.xpath('./*[local-name()="name"]')
+        drug_name = names[0].text if names else None
+
+        foods = drug.xpath('./*[local-name()="food-interactions"]/*[local-name()="food-interaction"]')
+
+        food_list = []
+
+        for food in foods:
+            if food.text:
+                food_list.append(food.text.strip())
+
+        if food_list:
+            food_interactions[drug_id] = {
+                "drug_name": drug_name,
+                "food_interactions": food_list
+            }
+
+except Exception:
+    # يعمل حتى لو لم يكن ملف XML موجودًا
+    food_interactions = {}
