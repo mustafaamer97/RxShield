@@ -1,5 +1,6 @@
 
 import streamlit as st
+from rxshield_engine import rxshield_engine
 
 # ===============================
 # Page
@@ -58,9 +59,10 @@ if st.button(
 
     else:
 
-        report = rxshield(
-            drug1,
-            drug2
+        report = rxshield_engine(
+    drug1,
+    drug2
+)
         )
 
         if report["interaction_found"] is False:
