@@ -3,6 +3,7 @@
 # ==========================================================
 
 from database import *
+from clinical_engine import *
 
 # ==========================================================
 # Interaction Lookup
@@ -87,7 +88,10 @@ def rxshield_engine(drug1_name, drug2_name):
 
     interaction = interactions[0]
 
-    metadata = get_clinical_metadata(interaction["interaction"])
+metadata = get_clinical_metadata(
+    interaction["interaction"],
+    interaction.get("adverse_effects", "")
+)
 
     return {
         "success": True,
