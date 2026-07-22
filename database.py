@@ -1,3 +1,4 @@
+import os
 import json
 import pandas as pd
 from collections import defaultdict
@@ -12,22 +13,65 @@ DRUG_INFO_PATH = "drug_info.json"
 SYNONYMS_PATH = "drugs_synonyms.json"
 INTERACTION_PATH = "all_id_interaction.csv"
 LABEL_PATH = "interaction_counts_4.xlsx"
-
-# إذا كان لديك ملف XML ضعه بنفس الاسم داخل المشروع
 XML_PATH = "full database.xml"
 
 # ==========================================================
-# LOAD FILES
+# LOAD JSON FILES
 # ==========================================================
 
-with open(DRUG_INFO_PATH, "r", encoding="utf-8") as f:
-    drug_info = json.load(f)
+if os.path.exists(DRUG_INFO_PATH):
 
-with open(SYNONYMS_PATH, "r", encoding="utf-8") as f:
-    drug_synonyms = json.load(f)
+    with open(DRUG_INFO_PATH, "r", encoding="utf-8") as f:
+        drug_info = json.load(f)
 
-interaction_df = pd.read_csv(INTERACTION_PATH)
-label_df = pd.read_excel(LABEL_PATH)
+else:
+
+    print("WARNING: drug_info.json not found.")
+    drug_info = {}
+
+if os.path.exists(SYNONYMS_PATH):
+
+    with open(SYNONYMS_PATH, "r", encoding="utf-8") as f:
+        drug_synonyms = json.load(f)
+
+else:
+
+    print("WARNING: drugs_synonyms.json not found.")
+    drug_synonyms = {}
+
+# ==========================================================
+# LOAD INTERACTION TABLE
+# ==========================================================
+
+if os.path.exists(INTERACTION_PATH):
+
+    interaction_df = pd.read_csv(INTERACTION_PATH)
+
+else:
+
+    print("WARNING: all_id_interaction.csv not found.")
+
+    interaction_df = pd.DataFrame(
+        columns=[
+            "Drug1",
+            "Drug2",
+            "Interaction",
+            "Adverse Effects"
+        ]
+    )
+
+# ==========================================================
+# LOAD LABELS
+# ==========================================================
+
+if os.path.exists(LABEL_PATH):
+
+    label_df = pd.read_excel(LABEL_PATH)
+
+else:
+
+    print("WARNING: interaction_counts_4.xlsx not found.")
+    label_df = pd.DataFrame()
 
 # ==========================================================
 # Drug Registry
@@ -40,13 +84,20 @@ for drug_id, info in drug_info.items():
     drug_registry[drug_id] = {
 
         "id": drug_id,
+
         "name": info.get("name"),
+
         "description": info.get("description"),
+
         "formula": info.get("formula"),
+
         "smiles": info.get("smiles"),
+
         "synonyms": drug_synonyms.get(drug_id, [])
 
     }
+
+print(f"Drug Registry Loaded: {len(drug_registry)} drugs")
 
 # ==========================================================
 # Search Index
@@ -56,12 +107,15 @@ search_index = defaultdict(set)
 
 for drug_id, drug in drug_registry.items():
 
-    if drug["name"]:
+    if drug.get("name"):
         search_index[drug["name"].lower()].add(drug_id)
 
-    for syn in drug["synonyms"]:
+    for syn in drug.get("synonyms", []):
+
         if syn:
             search_index[syn.lower()].add(drug_id)
+
+print(f"Search Index Loaded: {len(search_index)} entries")
 
 # ==========================================================
 # DDI Lookup
@@ -69,23 +123,36 @@ for drug_id, drug in drug_registry.items():
 
 ddi_lookup = defaultdict(list)
 
-for _, row in interaction_df.iterrows():
+try:
 
-    key = frozenset([
-        row["Drug1"].replace("Compound::", ""),
-        row["Drug2"].replace("Compound::", "")
-    ])
+    interaction_df = pd.read_csv(INTERACTION_PATH)
 
-    ddi_lookup[key].append({
+    for _, row in interaction_df.iterrows():
 
-        "drug1": row["Drug1"].replace("Compound::", ""),
-        "drug2": row["Drug2"].replace("Compound::", ""),
-        "interaction": row["Interaction"],
-        "adverse_effects":
-            None if pd.isna(row["Adverse Effects"])
-            else row["Adverse Effects"]
+        key = frozenset([
+            str(row["Drug1"]).replace("Compound::", ""),
+            str(row["Drug2"]).replace("Compound::", "")
+        ])
 
-    })
+        ddi_lookup[key].append({
+
+            "drug1": str(row["Drug1"]).replace("Compound::", ""),
+            "drug2": str(row["Drug2"]).replace("Compound::", ""),
+            "interaction": row["Interaction"],
+            "adverse_effects":
+                None if pd.isna(row["Adverse Effects"])
+                else row["Adverse Effects"]
+
+        })
+
+    print(f"Loaded {len(ddi_lookup)} drug interactions.")
+
+except Exception as e:
+
+    print("WARNING: all_id_interaction.csv could not be loaded.")
+    print(e)
+
+    ddi_lookup = defaultdict(list)
 
 # ==========================================================
 # Food Interactions
@@ -93,42 +160,5 @@ for _, row in interaction_df.iterrows():
 
 food_interactions = {}
 
-try:
+print("Food interactions skipped (XML file not available).")
 
-    parser = etree.XMLParser(remove_blank_text=True, huge_tree=True)
-
-    tree = etree.parse(XML_PATH, parser)
-
-    root = tree.getroot()
-
-    drugs = root.xpath('./*[local-name()="drug"]')
-
-    for drug in drugs:
-
-        ids = drug.xpath('./*[local-name()="drugbank-id"][@primary="true"]')
-
-        if not ids:
-            continue
-
-        drug_id = ids[0].text
-
-        names = drug.xpath('./*[local-name()="name"]')
-        drug_name = names[0].text if names else None
-
-        foods = drug.xpath('./*[local-name()="food-interactions"]/*[local-name()="food-interaction"]')
-
-        food_list = []
-
-        for food in foods:
-            if food.text:
-                food_list.append(food.text.strip())
-
-        if food_list:
-            food_interactions[drug_id] = {
-                "drug_name": drug_name,
-                "food_interactions": food_list
-            }
-
-except Exception:
-    # يعمل حتى لو لم يكن ملف XML موجودًا
-    food_interactions = {}
