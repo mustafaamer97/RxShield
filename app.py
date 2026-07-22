@@ -17,10 +17,7 @@ st.set_page_config(
 # ===============================
 
 st.title("🛡️ RxShield")
-
-st.caption(
-    "Clinical Drug Interaction Checker"
-)
+st.caption("Clinical Drug Interaction Checker")
 
 st.divider()
 
@@ -46,87 +43,85 @@ with col2:
 # Button
 # ===============================
 
-if st.button(
-    "🔍 Check Interaction",
-    use_container_width=True
-):
+if st.button("🔍 Check Interaction", use_container_width=True):
 
     if not drug1 or not drug2:
 
-        st.warning(
-            "Please enter both drugs."
-        )
+        st.warning("Please enter both drugs.")
 
     else:
 
-        report = rxshield_engine(
-    drug1,
-    drug2
-)
-        )
+        report = rxshield_engine(drug1, drug2)
 
-        if report["interaction_found"] is False:
+        # -----------------------------
+        # Errors
+        # -----------------------------
 
-            st.success(
-                "✅ No clinically significant interaction found."
-            )
+        if report.get("success") is False:
+
+            st.error(report["error"])
+
+        elif report["interaction_found"] is False:
+
+            st.success("✅ No clinically significant interaction found.")
 
         else:
 
             severity = report["severity"]
 
-            if severity == "Major":
-                st.error(f"🔴 {severity} Interaction")
+            if severity == "Contraindicated":
+                st.error(f"⛔ {severity}")
+
+            elif severity == "Major":
+                st.error(f"🔴 {severity}")
 
             elif severity == "Moderate":
-                st.warning(f"🟠 {severity} Interaction")
+                st.warning(f"🟠 {severity}")
 
             else:
-                st.info(f"🟢 {severity} Interaction")
+                st.info(f"🟢 {severity}")
 
-            st.subheader("Clinical Explanation")
+            st.subheader("Interaction")
 
-            st.write(
-                report["clinical_explanation"]
-            )
+            st.write(report["interaction"])
 
             st.subheader("Mechanism")
 
-            st.write(
-                report["mechanism"]
-            )
+            st.write(report["mechanism"])
 
             st.subheader("Clinical Management")
 
-            for item in report["management"]:
-                st.markdown(f"- {item}")
+            st.write(report["clinical_management"])
 
-            st.subheader("Monitoring")
+            st.subheader("Evidence")
 
-            for item in report["monitoring"]:
-                st.markdown(f"- {item}")
+            st.write(report["evidence"])
 
-            st.subheader("Patient Counseling")
+            # -----------------------------
+            # Adverse Effects
+            # -----------------------------
 
-            for item in report["patient_counseling"]:
-                st.markdown(f"- {item}")
+            if report["adverse_effects"]:
 
-            st.subheader("Food Interaction")
+                st.subheader("Adverse Effects")
+
+                for effect in report["adverse_effects"]:
+                    st.markdown(f"- {effect}")
+
+            # -----------------------------
+            # Food Interactions
+            # -----------------------------
 
             if report["food1"]:
 
-                st.markdown(
-                    f"### {report['drug1']['name']}"
-                )
+                st.subheader(f"Food Interactions ({report['drug1']['name']})")
 
                 for item in report["food1"]["food_interactions"]:
                     st.markdown(f"- {item}")
 
             if report["food2"]:
 
-                st.markdown(
-                    f"### {report['drug2']['name']}"
-                )
+                st.subheader(f"Food Interactions ({report['drug2']['name']})")
 
                 for item in report["food2"]["food_interactions"]:
                     st.markdown(f"- {item}")
