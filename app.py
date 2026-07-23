@@ -4,15 +4,22 @@ import json
 import os
 
 st.set_page_config(
-    page_title="RxShield - Clinical Drug Interaction Checker",
+    page_title="RxShield - Clinical Decision Support",
     page_icon="💊",
     layout="wide"
 )
 
-st.title("💊 RxShield: Clinical Drug & Food Interaction System")
-st.markdown("نظام ذكي متكامل لفحص التفاعلات الدوائية والتغذوية وتقديم التوصيات السريرية الفورية.")
+# تنسيق CSS مخصص لتحسين مظهر الواجهة على الهواتف والأجهزة
+st.markdown("""
+    <style>
+    .main-header { font-size: 24px; color: #2e6c80; font-weight: bold; }
+    .card { background-color: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #2e6c80; color: #333; }
+    </style>
+""", unsafe_allow_html=True)
 
-# مسار ملف الـ JSON المرفوع حديثاً في غيت هب
+st.title("💊 RxShield: Clinical Interaction System")
+st.markdown("نظام ذكي متطوّر لفحص التفاعلات السريرية وتقديم التوصيات الغذائية والدوائية.")
+
 json_file_path = "Drug to Food interactions Dataset.json"
 
 @st.cache_data
@@ -26,27 +33,40 @@ def load_data(path):
 df_data = load_data(json_file_path)
 
 if df_data is not None:
-    st.success(f"قاعدة البيانات جاهزة بنجاح (عدد السجلات: {len(df_data)})")
+    st.sidebar.success(قاعدة البيانات متصلة ({len(df_data)} سجل))
 else:
-    st.error("تنبيه: تأكد من أن اسم ملف الـ JSON مطابق تماماً في غيت هب.")
+    st.sidebar.error("ملف البيانات غير موجود في المستودع.")
 
-st.subheader("🔍 استعلام التفاعلات السريرية")
-drug_query = st.text_input("أدخل اسم الدواء للبحث (مثال: Warfarin أو Aspirin):", "")
+st.subheader("🔍 البحث السريري المتقدم")
+drug_query = st.text_input("أدخل اسم الدواء (مثال: Warfarin):", "")
 
-if st.button("بدء الفحص السريري"):
+if st.button("بحث وتدقيق"):
     if not drug_query:
-        st.warning("الرجاء كتابة اسم دواء في خانة البحث.")
+        st.warning("الرجاء كتابة اسم الدواء.")
     elif df_data is None:
-        st.error("لا يمكن إجراء الفحص لعدم تحميل ملف البيانات.")
+        st.error("لا يمكن إجراء الفحص لعدم توفر قاعدة البيانات.")
     else:
-        with st.spinner("جاري تحليل البيانات ومطابقة التفاعلات..."):
+        with st.spinner("جاري جلب التحليلات السريرية..."):
             results = df_data[df_data.apply(lambda row: row.astype(str).str.contains(drug_query, case=False).any(), axis=1)]
             
             if not results.empty:
-                st.success(f"تم العثور على {len(results)} نتيجة مطابقة للدواء: {drug_query}")
-                st.dataframe(results, use_container_width=True)
+                st.success(f"تم العثور على {len(results)} سجل تطابق الدواء: {drug_query}")
+                
+                # عرض النتائج بشكل كروت احترافية بدلاً من الجدول المعقد
+                for idx, row in results.iterrows():
+                    drug_name = row.get('name', 'غير متوفر')
+                    interactions = row.get('food_interactions', 'لا توجد تفاصيل غذائية مسجلة')
+                    ref = row.get('reference', 'غير متوفرة')
+                    
+                    st.markdown(f"""
+                        <div class="card">
+                            <h4>💊 الدواء: {drug_name}</h4>
+                            <p><b>🥗 التفاعلات الغذائية والتوجيهات:</b> {interactions}</p>
+                            <p style="font-size: 12px; color: gray;"><b>📚 المرجع العلمي:</b> {ref}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
             else:
-                st.warning(f"لم يتم العثور على تفاعلات مسجلة للدواء: {drug_query}")
+                st.warning(f"لا توجد تفاعلات مسجلة للدواء: {drug_query}")
 
 st.markdown("---")
-st.markdown("RxShield Clinical Decision Support System © 2026 | تم التطوير لدعم الرعاية السريرية الآمنة.")
+st.markdown("RxShield Clinical System © 2026 | دعم القرار السريري الآمن")
