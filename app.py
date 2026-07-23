@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# تنسيق CSS مخصص لتحسين مظهر الواجهة على الهواتف والأجهزة
+# تنسيق CSS مخصص لتحسين مظهر الواجهة
 st.markdown("""
     <style>
     .main-header { font-size: 24px; color: #2e6c80; font-weight: bold; }
@@ -33,7 +33,7 @@ def load_data(path):
 df_data = load_data(json_file_path)
 
 if df_data is not None:
-    st.sidebar.success(قاعدة البيانات متصلة ({len(df_data)} سجل))
+    st.sidebar.success(f"قاعدة البيانات متصلة ({len(df_data)} سجل)")
 else:
     st.sidebar.error("ملف البيانات غير موجود في المستودع.")
 
@@ -52,7 +52,6 @@ if st.button("بحث وتدقيق"):
             if not results.empty:
                 st.success(f"تم العثور على {len(results)} سجل تطابق الدواء: {drug_query}")
                 
-                # عرض النتائج بشكل كروت احترافية بدلاً من الجدول المعقد
                 for idx, row in results.iterrows():
                     drug_name = row.get('name', 'غير متوفر')
                     interactions = row.get('food_interactions', 'لا توجد تفاصيل غذائية مسجلة')
