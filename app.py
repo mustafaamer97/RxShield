@@ -1,127 +1,45 @@
-
 import streamlit as st
-from rxshield_engine import rxshield_engine
+import pandas as pd
+import json
+import os
 
-# ===============================
-# Page
-# ===============================
+st.set_page_config(page_title="RxShield - Clinical Drug Interaction Checker", page_icon="💊", layout="wide")
 
-st.set_page_config(
-    page_title="RxShield",
-    page_icon="🛡️",
-    layout="wide"
-)
+st.title("💊 RxShield: Clinical Drug & Food Interaction System")
+st.markdown("نظام ذكي متكامل لفحص التفاعلات الدوائية والتغذوية وتقديم التوصيات السريرية الفورية.")
 
-# ===============================
-# Header
-# ===============================
+json_file_path = "/kaggle/input/datasets/mustafaamer97/ddi-and-dfi/archive/Drug to Food interactions Dataset.json"
 
-st.title("🛡️ RxShield")
-st.caption("Clinical Drug Interaction Checker")
+@st.cache_data
+def load_data(path):
+    if os.path.exists(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return pd.DataFrame(data)
+    return None
 
-st.divider()
+df_data = load_data(json_file_path)
 
-# ===============================
-# Inputs
-# ===============================
+if df_data is not None:
+    st.sidebar.success(f"تم تحميل قاعدة البيانات بنجاح (عدد السجلات: {len(df_data)})")
+else:
+    st.sidebar.error("تنبيه: لم يتم العثور على ملف البيانات في المسار المحدد.")
 
-col1, col2 = st.columns(2)
+st.subheader("🔍 استعلام التفاعلات السريرية")
+drug_query = st.text_input("أدخل اسم الدواء للبحث عن تفاعلاته (مثال: Warfarin, Aspirin):", "")
 
-with col1:
-    drug1 = st.text_input(
-        "Drug 1",
-        placeholder="Example: Warfarin"
-    )
-
-with col2:
-    drug2 = st.text_input(
-        "Drug 2",
-        placeholder="Example: Aspirin"
-    )
-
-# ===============================
-# Button
-# ===============================
-
-if st.button("🔍 Check Interaction", use_container_width=True):
-
-    if not drug1 or not drug2:
-
-        st.warning("Please enter both drugs.")
-
-    else:
-
-        report = rxshield_engine(drug1, drug2)
-
-        # -----------------------------
-        # Errors
-        # -----------------------------
-
-        if report.get("success") is False:
-
-            st.error(report["error"])
-
-        elif report["interaction_found"] is False:
-
-            st.success("✅ No clinically significant interaction found.")
-
-        else:
-
-            severity = report["severity"]
-
-            if severity == "Contraindicated":
-                st.error(f"⛔ {severity}")
-
-            elif severity == "Major":
-                st.error(f"🔴 {severity}")
-
-            elif severity == "Moderate":
-                st.warning(f"🟠 {severity}")
-
+if st.button("بدء الفحص السريري"):
+    if drug_query and df_data is not None:
+        with st.spinner("جاري تحليل البيانات ومطابقة التفاعلات..."):
+            results = df_data[df_data.apply(lambda row: row.astype(str).str.contains(drug_query, case=False).any(), axis=1)]
+            
+            if not results.empty:
+                st.success(f"تم العثور على {len(results)} نتيجة مطابقة للدواء: {drug_query}")
+                st.dataframe(results, use_container_width=True)
             else:
-                st.info(f"🟢 {severity}")
+                st.warning(f"لم يتم العثور على تفاعلات مسجلة للدواء: {drug_query}")
+    else:
+        st.warning("الرجاء إدخال اسم دواء صالح للبحث.")
 
-            st.subheader("Interaction")
-
-            st.write(report["interaction"])
-
-            st.subheader("Mechanism")
-
-            st.write(report["mechanism"])
-
-            st.subheader("Clinical Management")
-
-            st.write(report["clinical_management"])
-
-            st.subheader("Evidence")
-
-            st.write(report["evidence"])
-
-            # -----------------------------
-            # Adverse Effects
-            # -----------------------------
-
-            if report["adverse_effects"]:
-
-                st.subheader("Adverse Effects")
-
-                for effect in report["adverse_effects"]:
-                    st.markdown(f"- {effect}")
-
-            # -----------------------------
-            # Food Interactions
-            # -----------------------------
-
-            if report["food1"]:
-
-                st.subheader(f"Food Interactions ({report['drug1']['name']})")
-
-                for item in report["food1"]["food_interactions"]:
-                    st.markdown(f"- {item}")
-
-            if report["food2"]:
-
-                st.subheader(f"Food Interactions ({report['drug2']['name']})")
-
-                for item in report["food2"]["food_interactions"]:
-                    st.markdown(f"- {item}")
+st.markdown("---")
+st.markdown("RxShield Clinical Decision Support System © 2026 | تم التطوير لدعم الرعاية السريرية الآمنة.")
