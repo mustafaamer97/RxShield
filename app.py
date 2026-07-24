@@ -29,6 +29,38 @@ st.markdown("""
         padding: 16px;
         border-radius: 0 8px 8px 0;
         margin-top: 10px;
+        import streamlit as st
+import pandas as pd
+import gdown
+import os
+
+st.title("تطبيق فحص التداخلات الدوائية (RxShield)")
+
+# رابط ملفك على جوجل درايف
+file_id = "1FEhCYlAOewAfCaBAyyncDDIvQJoo8G3x"
+url = f'https://drive.google.com/uc?id={file_id}'
+output = 'all_id_interaction.csv'
+
+# دالة لتحميل البيانات مرة واحدة مؤقتاً لسرعة التطبيق
+@st.cache_data
+def load_data():
+    if not os.path.exists(output):
+        with st.spinner('جاري تحميل قاعدة البيانات الضخمة من جوجل درايف، يرجى الانتظار قليلاً...'):
+            gdown.download(url, output, quiet=False)
+    
+    # قراءة الملف عبر مكتبة pandas
+    df = pd.read_csv(output)
+    return df
+
+# تشغيل دالة تحميل البيانات
+df = load_data()
+
+st.success("تم تحميل البيانات بنجاح!")
+st.write("عدد الصفوف في الملف:", df.shape[0])
+
+# عرض عينة بسيطة للتأكد
+st.dataframe(df.head())
+
     }
     .clinical-box {
         background-color: #eff6ff;
