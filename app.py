@@ -80,16 +80,25 @@ db_conn = init_database()
 if db_conn:
     st.success("🎉 Application started and connected to database successfully!")
     
-    # Try to fetch a preview sample from the database
     try:
-        # Assuming the table name inside the DB is 'all_id_interaction'
-        df_sample = pd.read_sql_query("SELECT * FROM all_id_interaction LIMIT 5;", db_conn)
+        # Smart code to dynamically fetch the actual table name from SQLite
+        cursor = db_conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
         
-        st.write("### 📊 Database Preview Sample:")
-        st.dataframe(df_sample)
+        if tables:
+            actual_table_name = tables[0][0]
+            st.info(f"📦 Found table: '{actual_table_name}' inside the database.")
+            
+            # Read a sample preview using the dynamically discovered table name
+            df_sample = pd.read_sql_query(f"SELECT * FROM {actual_table_name} LIMIT 5;", db_conn)
+            
+            st.write("### 📊 Database Preview Sample:")
+            st.dataframe(df_sample)
+        else:
+            st.warning("⚠️ The database is connected, but it seems to be empty (No tables found).")
+            
     except Exception as e:
-        st.warning(f"⚠️ Connected to DB, but failed to read table (Table name might be different): {e}")
+        st.error(f"❌ Error during database inspection: {e}")
 else:
     st.error("⚙️ Something went wrong while initializing the database connection.")
-
-
