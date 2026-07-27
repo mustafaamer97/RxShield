@@ -13,6 +13,7 @@ st.set_page_config(
 )
 
 st.title("🛡️ RxShield | Drug Interaction Checker")
+st.write("Enter drug IDs or names to check for clinical interactions instantly.")
 
 # ========================================================
 # 1. GitHub Repository Storage Configuration
@@ -28,77 +29,64 @@ DB_FILE_PATH = "all_id_interaction.db"
 # ========================================================
 @st.cache_resource
 def init_database():
-    # If the database file doesn't exist locally, download and unzip it
     if not os.path.exists(DB_FILE_PATH):
-        with st.spinner('⏳ Initializing large database from GitHub (This happens only once)...'):
-            # Download the zip file
+        with st.spinner('⏳ Initializing database from GitHub (First time setup)...'):
             response = requests.get(ZIP_FILE_URL, stream=True)
             if response.status_code == 200:
                 with open(DB_ZIP_PATH, 'wb') as f:
                     f.write(response.content)
-                
-                # Extract the zip file
                 with zipfile.ZipFile(DB_ZIP_PATH, 'r') as zip_ref:
                     zip_ref.extractall(".")
-                
-                # Clean up the zip file to save space
                 if os.path.exists(DB_ZIP_PATH):
                     os.remove(DB_ZIP_PATH)
             else:
-                st.error("❌ Failed to download the database from GitHub. Please check if the file exists in your repository.")
+                st.error("❌ Failed to download database.")
                 return None
     
-    # Connect to the SQLite database
     conn = sqlite3.connect(DB_FILE_PATH, check_same_thread=False)
     return conn
 
-# ========================================================
-# 3. RxShield Search Engine Class
-# ========================================================
-class RxShieldEngine:
-    def __init__(self):
-        self.drug_info = {}
-        self.synonyms = {}
-
-    def load_json_data(self):
-        # Load companion JSON files if they exist in the repository
-        if os.path.exists('drug_info.json'):
-            with open('drug_info.json', 'r', encoding='utf-8') as f:
-                self.drug_info = json.load(f)
-        
-        if os.path.exists('drugs_synonyms.json'):
-            with open('drugs_synonyms.json', 'r', encoding='utf-8') as f:
-                self.synonyms = json.load(f)
-
-# Initialize the engine
-engine = RxShieldEngine()
-engine.load_json_data()
-
-# Initialize connection to the SQLite database
 db_conn = init_database()
 
+# ========================================================
+# 3. Interactive Search Section
+# ========================================================
 if db_conn:
-    st.success("🎉 Application started and connected to database successfully!")
+    st.success("🎉 Database connected and protected by RxShield Engine.")
     
-    try:
-        # Smart code to dynamically fetch the actual table name from SQLite
-        cursor = db_conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        
-        if tables:
-            actual_table_name = tables[0][0]
-            st.info(f"📦 Found table: '{actual_table_name}' inside the database.")
-            
-            # Read a sample preview using the dynamically discovered table name
-            df_sample = pd.read_sql_query(f"SELECT * FROM {actual_table_name} LIMIT 5;", db_conn)
-            
-            st.write("### 📊 Database Preview Sample:")
+    # واجهة البحث
+    st.write("---")
+    st.subheader("🔍 Check Drug Interactions")
+    
+    search_query = st.text_input("Enter Drug ID (e.g., DB04920, DB01336):", "").strip()
+    
+    if search_query:
+        with st.spinner('Searching database...'):
+            try:
+                # استعلام ذكي للبحث عن الدواء سواء كان في خانة Drug1 أو Drug2
+                # قمنا بتثبيت اسم الجدول المكتشف 'interactions'
+                query = """
+                SELECT * FROM interactions 
+                WHERE "Drug1 ID" LIKE ? OR "Drug2 ID" LIKE ?
+                """
+                df_result = pd.read_sql_query(query, db_conn, params=(f'%{search_query}%', f'%{search_query}%'))
+                
+                if not df_result.empty:
+                    st.metric(label="Interactions Found", value=len(df_result))
+                    st.dataframe(df_result, use_container_width=True)
+                else:
+                    st.warning(f"No interactions found for '{search_query}'.")
+            except Exception as e:
+                st.error(f"Search error: {e}")
+                st.info("Tip: If column names differ, you can view the schema below.")
+                
+    # قسم جانبي اختياري لعرض عينة للتأكد من أسماء الأعمدة
+    with st.expander("📊 Show Database Sample & Columns"):
+        try:
+            df_sample = pd.read_sql_query("SELECT * FROM interactions LIMIT 3;", db_conn)
             st.dataframe(df_sample)
-        else:
-            st.warning("⚠️ The database is connected, but it seems to be empty (No tables found).")
-            
-    except Exception as e:
-        st.error(f"❌ Error during database inspection: {e}")
+        except:
+            pass
 else:
-    st.error("⚙️ Something went wrong while initializing the database connection.")
+    st.error("⚙️ Connection error.")
+
