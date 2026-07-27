@@ -8,7 +8,9 @@ import json
 import re
 import string
 
-# Set wide responsive workspace configurations
+# ========================================================
+# 0. Page Config & Professional UI Injection
+# ========================================================
 st.set_page_config(
     page_title="RxShield | Clinical Decision Support System",
     page_icon="🛡️",
@@ -16,19 +18,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ========================================================
-# 0. Custom Production-Grade Clinical CSS Injection
-# ========================================================
 st.markdown("""
 <style>
-    /* Global Typography & Micro-spacing adjustments */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', -apple-system, sans-serif;
     }
-    
-    /* Sticky Dynamic App Header Component */
     .sticky-header {
         position: -webkit-sticky;
         position: sticky;
@@ -39,116 +35,38 @@ st.markdown("""
         margin-bottom: 30px;
         z-index: 99;
     }
-    .header-title {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #00796b;
-        margin: 0;
-        letter-spacing: -0.5px;
-    }
-    .header-subtitle {
-        font-size: 1rem;
-        color: var(--text-color);
-        opacity: 0.8;
-        margin-top: 4px;
-    }
-    
-    /* Medical Presentation Cards */
+    .header-title { font-size: 2.2rem; font-weight: 700; color: #00796b; margin: 0; letter-spacing: -0.5px; }
+    .header-subtitle { font-size: 1rem; color: var(--text-color); opacity: 0.8; margin-top: 4px; }
     .med-card {
         background-color: var(--secondary-background-color);
         border: 1px solid rgba(128, 128, 128, 0.15);
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
+        border-radius: 12px; padding: 24px; margin-bottom: 20px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
-    /* Clinical Urgency Badges */
     .clinical-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 14px;
-        border-radius: 30px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 5px;
+        display: inline-flex; align-items: center; padding: 6px 14px;
+        border-radius: 30px; font-size: 0.85rem; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px;
     }
-    .badge-high {
-        background-color: rgba(211, 47, 47, 0.12);
-        color: #d32f2f;
-        border: 1px solid rgba(211, 47, 47, 0.3);
-    }
-    .badge-moderate {
-        background-color: rgba(245, 127, 23, 0.12);
-        color: #f57f17;
-        border: 1px solid rgba(245, 127, 23, 0.3);
-    }
-    .badge-monitor {
-        background-color: rgba(21, 101, 192, 0.12);
-        color: #1565c0;
-        border: 1px solid rgba(21, 101, 192, 0.3);
-    }
-    
-    /* Sidebar Layout Elements */
-    .sidebar-brand {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #00796b;
-        margin-bottom: 5px;
-    }
+    .badge-high { background-color: rgba(211, 47, 47, 0.12); color: #d32f2f; border: 1px solid rgba(211, 47, 47, 0.3); }
+    .badge-moderate { background-color: rgba(245, 127, 23, 0.12); color: #f57f17; border: 1px solid rgba(245, 127, 23, 0.3); }
+    .badge-monitor { background-color: rgba(21, 101, 192, 0.12); color: #1565c0; border: 1px solid rgba(21, 101, 192, 0.3); }
+    .sidebar-brand { font-size: 1.5rem; font-weight: 700; color: #00796b; margin-bottom: 5px; }
     .sidebar-status-tag {
-        background-color: rgba(46, 125, 50, 0.12);
-        color: #2e7d32;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        display: inline-block;
-        margin-bottom: 20px;
-        border: 1px solid rgba(46, 125, 50, 0.2);
+        background-color: rgba(46, 125, 50, 0.12); color: #2e7d32; padding: 6px 12px;
+        border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;
+        margin-bottom: 20px; border: 1px solid rgba(46, 125, 50, 0.2);
     }
-    
-    /* Application Footer */
-    .app-footer {
-        text-align: center;
-        padding: 25px 0px;
-        margin-top: 60px;
-        font-size: 0.8rem;
-        color: var(--text-color);
-        opacity: 0.6;
-        border-top: 1px solid rgba(128, 128, 128, 0.15);
-    }
+    .app-footer { text-align: center; padding: 25px 0px; margin-top: 60px; font-size: 0.8rem; opacity: 0.6; border-top: 1px solid rgba(128, 128, 128, 0.15); }
 </style>
 """, unsafe_allow_html=True)
 
-# ========================================================
-# 1. Professional Sidebar Metadata & Diagnostic Layer
-# ========================================================
 with st.sidebar:
     st.markdown("<div class='sidebar-brand'>🛡️ RxShield CDSS</div>", unsafe_allow_html=True)
     st.markdown("<div class='sidebar-status-tag'>🟢 ENGINE ONLINE & SECURED</div>", unsafe_allow_html=True)
-    
-    st.markdown("### 📊 System Diagnostics")
-    st.caption("**Core Pipeline Layer:** Tier-1 Clinical Verification")
-    st.caption("**Deployment Context:** Production Cloud Instance")
-    st.caption("**System Environment Validation:** Passed")
-    
-    st.markdown("---")
-    st.markdown("### ⚙️ Database Ledger Specifications")
-    st.info("SQLite Engine operating via read-only high-concurrency connections. Data cross-referenced against authoritative medical definitions mappings.")
-    
-    st.markdown("---")
-    st.markdown("### ⚠️ Clinical Disclaimer")
-    st.caption(
-        "This platform operates strictly as a Tier-1 Clinical Decision Support System reference aid. "
-        "It does not replace professional medical judgment, diagnostic validation, or physical examination workflows. "
-        "Always cross-reference critical dual therapy pathways manually."
-    )
+    st.markdown("### 📊 System Diagnostics\n**Core Pipeline Layer:** Tier-1 Clinical Verification\n**Deployment Context:** Production Cloud Instance")
+    st.markdown("---\n### ⚙️ Database Ledger Specifications\nSQLite Engine operating via read-only connections. Data strictly cross-referenced against DrugBank / Medical schemas.")
 
-# Sticky Page Header Interface
 st.markdown("""
 <div class='sticky-header'>
     <h1 class='header-title'>RxShield | Advanced Decision Support Portal</h1>
@@ -157,7 +75,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ========================================================
-# 2. Configuration & Database Initialization (UNTOUCHED)
+# 1. Database Initialization
 # ========================================================
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/mustafaamer97/RxShield/main"
 ZIP_FILE_URL = f"{GITHUB_RAW_URL}/all_id_interaction.zip"
@@ -167,7 +85,6 @@ DB_FILE_PATH = "all_id_interaction.db"
 @st.cache_resource
 def init_database():
     if not os.path.exists(DB_FILE_PATH):
-        # Styled native spinner framework for aesthetic loading state
         with st.spinner('⏳ [CDSS Pipeline Initialization] Downloading and indexing medical database matrices...'):
             response = requests.get(ZIP_FILE_URL, stream=True)
             if response.status_code == 200:
@@ -185,54 +102,102 @@ def init_database():
 db_conn = init_database()
 
 # ========================================================
-# 3. Loading Companion Files & Building Search Maps (UNTOUCHED)
+# 2. DATA ENGINEERING: Strict JSON Parsing & IUPAC Isolation
 # ========================================================
 @st.cache_data
-def load_helper_data():
-    synonyms = {}
+def build_clinical_medication_index():
+    synonyms_data = {}
+    drug_info = {}
     food_data = ""
     
     if os.path.exists('drugs_synonyms.json'):
         with open('drugs_synonyms.json', 'r', encoding='utf-8') as f:
-            synonyms = json.load(f)
+            synonyms_data = json.load(f)
             
-    food_file_name = 'Drug to Food interactions ...'
-    if os.path.exists(food_file_name):
-        with open(food_file_name, 'r', encoding='utf-8') as f:
+    if os.path.exists('drug_info.json'):
+        with open('drug_info.json', 'r', encoding='utf-8') as f:
+            drug_info = json.load(f)
+            
+    if os.path.exists('Drug to Food interactions ...'):
+        with open('Drug to Food interactions ...', 'r', encoding='utf-8') as f:
             food_data = f.read()
-            
-    dropdown_set = set()
-    name_to_id = {}
-    id_to_primary_name = {}
+
+    med_index = {}
+    all_ids = set(synonyms_data.keys()).union(set(drug_info.keys()))
     
-    for drug_id, syn_list in synonyms.items():
-        if syn_list:
-            u_id = drug_id.upper()
-            primary = str(syn_list[0]).strip().capitalize()
-            id_to_primary_name[u_id] = primary
+    for drug_id in all_ids:
+        u_id = drug_id.upper()
+        info = drug_info.get(drug_id, {})
+        
+        # 1. STRICT DISPLAY NAME RESOLUTION
+        display_name = ""
+        if isinstance(info, dict):
+            # Prioritize the clean 'name' field
+            display_name = info.get("name", "").strip()
+            # Fallback 1: generic_name
+            if not display_name:
+                display_name = info.get("generic_name", "").strip()
+                
+        # Fallback 2: Synonyms (But filter out IUPAC chemical structures!)
+        if not display_name:
+            syns = synonyms_data.get(drug_id, [])
+            for s in syns:
+                # If name doesn't contain chemical symbols like (+), -, [, ], numbers
+                if not any(char in str(s) for char in ['+', '-', '(', ')', '[', ']', '1', '2', '3', '4']):
+                    display_name = str(s).strip()
+                    break
+            # Last resort
+            if not display_name and syns:
+                display_name = str(syns[0]).strip()
+            elif not display_name:
+                continue # Skip if completely unidentifiable
+                
+        display_name = display_name.capitalize()
+        
+        # 2. COLLECT HIDDEN SEARCH ALIASES
+        search_aliases = {display_name.lower()}
+        
+        for syn in synonyms_data.get(drug_id, []):
+            search_aliases.add(str(syn).lower())
             
-            for syn in syn_list:
-                clean_name = str(syn).strip().capitalize()
-                if clean_name:
-                    dropdown_set.add(clean_name)
-                    name_to_id[clean_name.lower()] = u_id
+        if isinstance(info, dict):
+            for key in ['generic_name', 'brand_names', 'synonyms']:
+                val = info.get(key)
+                if isinstance(val, list):
+                    for v in val: search_aliases.add(str(v).lower())
+                elif isinstance(val, str):
+                    for v in val.split(','): search_aliases.add(v.strip().lower())
+        
+        # Normalize aliases (remove punctuation/extra spaces for searching)
+        cleaned_aliases = set()
+        for alias in search_aliases:
+            if alias:
+                clean_str = str(alias).lower().translate(str.maketrans('', '', string.punctuation))
+                clean_str = " ".join(clean_str.split())
+                if clean_str:
+                    cleaned_aliases.add(clean_str)
                     
-    return food_data, sorted(list(dropdown_set)), name_to_id, id_to_primary_name
+        med_index[u_id] = {
+            "display_name": display_name,
+            "search_aliases": cleaned_aliases,
+            "drug_id": u_id
+        }
+        
+    return food_data, med_index
 
-food_interactions_text, sorted_drugs_list, name_to_id_map, id_to_name_map = load_helper_data()
+food_interactions_text, med_index = build_clinical_medication_index()
 
+# ========================================================
+# 3. Core Engine Functions
+# ========================================================
 def clean_interaction_text(text, target_drug_name):
-    if not text:
-        return ""
+    if not text: return ""
     cleaned = re.sub(r'\(\.\*\)', f" {target_drug_name} ", text)
     cleaned = cleaned.replace("the risk or severity of", "The risk of")
     cleaned = cleaned.replace("when is combined with .", f"when combined with {target_drug_name}.")
     cleaned = cleaned.replace("when combined with .", f"when combined with {target_drug_name}.")
-    
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    if cleaned and not cleaned.endswith('.'):
-        cleaned += '.'
-    return cleaned
+    return cleaned + '.' if cleaned and not cleaned.endswith('.') else cleaned
 
 def get_severity_color(text):
     text_lower = text.lower()
@@ -240,42 +205,46 @@ def get_severity_color(text):
         return "🔴 High Risk"
     elif any(w in text_lower for w in ["decrease the therapeutic efficacy", "increase the excretion rate", "risk of adverse effects"]):
         return "🟡 Moderate Caution"
-    else:
-        return "🔵 Monitor / Information"
+    return "🔵 Monitor / Information"
 
-# Reusable UI search architecture function
 def render_medication_search_flow(label, index, key_prefix):
     search_input = st.text_input(
-        f"🔍 Query Generic Name, Brand Variant, or Synonym for {label}:",
+        f"🔍 Search Formulation, Brand, or Synonym for [{label}]:",
         key=f"{key_prefix}_text_search",
-        placeholder="Type here to filter registry dynamically (e.g., Aspirin, Metformin)..."
+        placeholder="e.g., Warfarin, Aspirin, Metformin..."
     ).strip()
     
-    # Logic matching mapping (UNTOUCHED)
-    if not search_input:
-        text = ""
-    else:
-        text = str(search_input).lower().translate(str.maketrans('', '', string.punctuation))
-    normalized_query = " ".join(text.split())
+    normalized_query = " ".join(search_input.lower().translate(str.maketrans('', '', string.punctuation)).split()) if search_input else ""
     
     filtered_pool = []
-    for d_id, metadata in index.items():
-        d_name = metadata["display_name"]
-        if not normalized_query:
-            filtered_pool.append((d_name, d_id))
-        else:
+    if not normalized_query:
+        # Prevent rendering all 100k items if empty, just show top 500 clean names
+        count = 0
+        for d_id, metadata in index.items():
+            filtered_pool.append((metadata["display_name"], d_id))
+            count += 1
+            if count > 500: break
+    else:
+        for d_id, metadata in index.items():
             if any(normalized_query in alias for alias in metadata["search_aliases"]):
-                filtered_pool.append((d_name, d_id))
+                filtered_pool.append((metadata["display_name"], d_id))
                 
-    filtered_pool.sort(key=lambda x: x[0])
+    # Sort uniquely by display name to avoid duplicates
+    unique_pool = {}
+    for name, d_id in filtered_pool:
+        if name not in unique_pool:
+            unique_pool[name] = d_id
+            
+    final_list = [(name, d_id) for name, d_id in unique_pool.items()]
+    final_list.sort(key=lambda x: x[0])
     
-    if not filtered_pool:
-        st.warning(f"⚠️ Zero system matches found for '{search_input}'. Check nomenclature parameters.")
+    if not final_list:
+        st.warning(f"⚠️ Zero clinical matches found for '{search_input}'.")
         return None, None
         
     selected_tuple = st.selectbox(
-        f"Select Confirmed Formulation Entry [{label}]:",
-        options=filtered_pool,
+        f"Select Confirmed Entry:",
+        options=final_list,
         format_func=lambda x: x[0],
         key=f"{key_prefix}_dropdown"
     )
@@ -284,33 +253,16 @@ def render_medication_search_flow(label, index, key_prefix):
         return selected_tuple[1], selected_tuple[0]
     return None, None
 
-# Restructure dictionary structure precisely mapping backwards compatibility
-med_index_compat = {}
-for name_key, d_id in name_to_id_map.items():
-    if d_id not in med_index_compat:
-        med_index_compat[d_id] = {
-            "display_name": id_to_name_map.get(d_id, name_key.capitalize()),
-            "search_aliases": set(),
-            "drug_id": d_id
-        }
-    med_index_compat[d_id]["search_aliases"].add(name_key.lower())
-
 # ========================================================
-# 4. Interactive Tab Layout UI Restyling
+# 4. Main User Interface
 # ========================================================
 if db_conn:
-    # Beautifully modern native styled tab layouts
-    tab1, tab2, tab3 = st.tabs([
-        "🔬 Single Formulation Profiler", 
-        "⚔️ Cross-Match Binary Interaction Checker", 
-        "🥦 Nutritional & Food Constraints"
-    ])
+    tab1, tab2, tab3 = st.tabs(["🔬 Single Formulation Profiler", "⚔️ Cross-Match Binary Interaction Checker", "🥦 Nutritional Constraints"])
     
     # --- TAB 1: SMART SINGLE DRUG SEARCH ---
     with tab1:
         st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-        st.subheader("Formulation Matrix Query Layer")
-        target_id, current_drug_name = render_medication_search_flow("Target Drug", med_index_compat, "single")
+        target_id, current_drug_name = render_medication_search_flow("Target Clinical Drug", med_index, "single")
         st.markdown("</div>", unsafe_allow_html=True)
         
         if target_id:
@@ -320,129 +272,74 @@ if db_conn:
             if not df_res.empty:
                 processed_data = []
                 for _, row in df_res.iterrows():
-                    d1_id = str(row['Drug1 ID']).upper()
-                    d2_id = str(row['Drug2 ID']).upper()
+                    other_id = str(row['Drug2 ID']).upper() if str(row['Drug1 ID']).upper() == target_id else str(row['Drug1 ID']).upper()
+                    other_name = med_index[other_id]["display_name"] if other_id in med_index else "Registered Medication"
                     
-                    other_id = d2_id if d1_id == target_id else d1_id
-                    other_name = id_to_name_map.get(other_id, "Registered Medication")
-                    
-                    raw_text = row['Interaction']
-                    clean_text = clean_interaction_text(raw_text, other_name)
-                    severity = get_severity_color(clean_text)
-                    
+                    clean_text = clean_interaction_text(row['Interaction'], other_name)
                     processed_data.append({
                         "Interacting Drug Formulation": other_name,
-                        "Clinical Severity Status": severity,
+                        "Clinical Severity Status": get_severity_color(clean_text),
                         "Documented Mechanism / Medical Effect": clean_text
                     })
                 
                 df_clean = pd.DataFrame(processed_data)
                 
                 st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-                # Specialized professional filter panel layout
-                severity_filter = st.radio(
-                    "🎯 Filter Profile Ledger by Severity Level Grouping:",
-                    options=["All Registered Interactions", "🔴 High Risk Only", "🟡 Moderate Caution Only", "🔵 Monitor / Info Only"],
-                    horizontal=True
-                )
+                severity_filter = st.radio("🎯 Filter Profile Ledger by Severity:", options=["All", "🔴 High Risk Only", "🟡 Moderate Caution Only", "🔵 Monitor / Info Only"], horizontal=True)
                 
-                if "🔴" in severity_filter:
-                    df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔴 High Risk"]
-                elif "🟡" in severity_filter:
-                    df_clean = df_clean[df_clean["Clinical Severity Status"] == "🟡 Moderate Caution"]
-                elif "🔵" in severity_filter:
-                    df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔵 Monitor / Information"]
+                if "🔴" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔴 High Risk"]
+                elif "🟡" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🟡 Moderate Caution"]
+                elif "🔵" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔵 Monitor / Information"]
                 
                 st.metric(label="Total Cross-Referenced Vectors", value=len(df_clean))
-                
-                # Optimized responsive professional data table rendering
-                st.dataframe(
-                    df_clean, 
-                    use_container_width=True, 
-                    hide_index=True
-                )
+                st.dataframe(df_clean, use_container_width=True, hide_index=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
-                st.info(f"ℹ️ No contraindications registered for {current_drug_name} inside ledger matrices.")
+                st.info(f"ℹ️ No contraindications registered for {current_drug_name}.")
 
     # --- TAB 2: DRUG VS DRUG CHECKER ---
     with tab2:
         st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-        st.subheader("Binary Formulation Intersection Scan")
-        
-        # Grid structure columns layout for parallel selection entry
         col1, col2 = st.columns(2)
-        with col1:
-            id_a, name_a = render_medication_search_flow("Medication Component A", med_index_compat, "pair_a")
-        with col2:
-            id_b, name_b = render_medication_search_flow("Medication Component B", med_index_compat, "pair_b")
+        with col1: id_a, name_a = render_medication_search_flow("Component A", med_index, "pair_a")
+        with col2: id_b, name_b = render_medication_search_flow("Component B", med_index, "pair_b")
         st.markdown("</div>", unsafe_allow_html=True)
             
         if id_a and id_b:
-            if id_a == id_b:
-                st.warning("⚠️ Identity Conflict: Please select two separate clinical formulations to map cross-interaction.")
+            if id_a == id_b: st.warning("⚠️ Identity Conflict: Please select two separate formulations.")
             else:
-                query = """
-                SELECT * FROM interactions 
-                WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) 
-                   OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)
-                """
+                query = "SELECT * FROM interactions WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)"
                 df_pair = pd.read_sql_query(query, db_conn, params=(id_a, id_b, id_b, id_a))
                 
                 st.markdown("<div class='med-card'>", unsafe_allow_html=True)
                 if not df_pair.empty:
-                    raw_interaction = df_pair.iloc[0]['Interaction']
-                    cleaned_interaction = clean_interaction_text(raw_interaction, name_b)
+                    cleaned_interaction = clean_interaction_text(df_pair.iloc[0]['Interaction'], name_b)
                     severity_status = get_severity_color(cleaned_interaction)
-                    
                     st.error("🚨 Contraindication Profile Alert Generated!")
-                    
-                    # Modern dynamic medical urgency micro-badge processing layout output
-                    if "🔴" in severity_status:
-                        st.markdown("<span class='clinical-badge badge-high'>CRITICAL CRITERIA RISK</span>", unsafe_allow_html=True)
-                    elif "🟡" in severity_status:
-                        st.markdown("<span class='clinical-badge badge-moderate'>MODERATE MODERATION WARNING</span>", unsafe_allow_html=True)
-                    else:
-                        st.markdown("<span class='clinical-badge badge-monitor'>CLINICAL MONITOR / INFO</span>", unsafe_allow_html=True)
-                        
+                    if "🔴" in severity_status: st.markdown("<span class='clinical-badge badge-high'>CRITICAL CRITERIA RISK</span>", unsafe_allow_html=True)
+                    elif "🟡" in severity_status: st.markdown("<span class='clinical-badge badge-moderate'>MODERATE MODERATION WARNING</span>", unsafe_allow_html=True)
+                    else: st.markdown("<span class='clinical-badge badge-monitor'>CLINICAL MONITOR / INFO</span>", unsafe_allow_html=True)
                     st.markdown(f"**Documented Pathophysiology:** {cleaned_interaction}")
                 else:
-                    st.success(f"✅ Safe Therapeutic Pathway: No direct contraindications mapped between {name_a} and {name_b} within systems.")
+                    st.success(f"✅ Safe Therapeutic Pathway: No direct contraindications mapped between {name_a} and {name_b}.")
                 st.markdown("</div>", unsafe_allow_html=True)
 
     # --- TAB 3: DRUG-FOOD INTERACTIONS ---
     with tab3:
         st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-        st.subheader("Nutritional Ledger Compatibility Screening")
-        food_search = st.text_input(
-            "🥗 Query specific active component for lifestyle or nutritional constraints:", 
-            placeholder="Search keywords (e.g., Alcohol, Grapefruit, Dairy products, Warfarin)...",
-            key="food_search_input"
-        ).strip()
+        food_search = st.text_input("🥗 Query lifestyle or nutritional constraints (e.g., Grapefruit, Warfarin):").strip()
         st.markdown("</div>", unsafe_allow_html=True)
         
         if food_search and food_interactions_text:
             matching_lines = [line.strip() for line in food_interactions_text.split('\n') if food_search.lower() in line.lower()]
-            
             st.markdown("<div class='med-card'>", unsafe_allow_html=True)
             if matching_lines:
-                st.warning(f"⚠️ Identified {len(matching_lines)} Patient Dietary Precautions:")
-                for line in matching_lines[:15]:
-                    st.markdown(f"<div style='padding: 8px 0px; border-bottom: 1px solid rgba(128,128,128,0.1);'>💡 {line}</div>", unsafe_allow_html=True)
+                st.warning(f"⚠️ Identified {len(matching_lines)} Dietary Precautions:")
+                for line in matching_lines[:15]: st.markdown(f"<div style='padding: 8px 0px; border-bottom: 1px solid rgba(128,128,128,0.1);'>💡 {line}</div>", unsafe_allow_html=True)
             else:
-                st.success("✅ No generalized clinical dietary contraindications detected for this keyword parameter.")
+                st.success("✅ No dietary contraindications detected.")
             st.markdown("</div>", unsafe_allow_html=True)
-        elif not food_interactions_text:
-            st.info("📋 Nutritional ledger matrices are currently offline or missing from repo assets.")
-        else:
-            st.caption("Enter a target molecule or lifestyle component string above to map physiological diet vulnerabilities.")
-
 else:
-    st.error("⚙️ Infrastructure Pipeline Connection Error: Active connection to database framework could not be safely verified.")
+    st.error("⚙️ Connection Error.")
 
-# Clean professional corporate product line footer
-st.markdown("""
-<div class='app-footer'>
-    RxShield CDSS Engine Tier-1 Framework • Platform Build v2026.4.12-Clinical • Verified SQLite Ledger
-</div>
-""", unsafe_allow_html=True)
+st.markdown("<div class='app-footer'>RxShield CDSS Engine Tier-1 • Platform Build v2026.4.12 • Verified Clinical Ledger</div>", unsafe_allow_html=True)
