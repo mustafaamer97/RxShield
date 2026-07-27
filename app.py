@@ -102,8 +102,29 @@ def init_database():
 db_conn = init_database()
 
 # ========================================================
-# 2. DATA ENGINEERING: Strict JSON Parsing & IUPAC Isolation
+# 2. STRICT DATA ENGINEERING: Filter Out IUPAC Chemicals
 # ========================================================
+def is_valid_drug_name(name):
+    """Returns True only if the name looks like a real medication name, not a chemical formula."""
+    if not name or len(name) < 2:
+        return False
+    name_str = str(name).strip()
+    
+    # Reject if it contains typical IUPAC / chemical indicators
+    iupac_symbols = ['(', ')', '[', ']', '{', '}', '+', '=', '<', '>', ';', '\\', '/']
+    if any(char in name_str for char in iupac_symbols):
+        return False
+        
+    # Reject if it starts with numbers or chemical locants like "2-", "1r-"
+    if re.match(r'^[0-9]+[\-\s]', name_str) or re.match(r'^\([0-9a-z]+\)', name_str):
+        return False
+        
+    # Reject if it's excessively long (typical drug names are concise)
+    if len(name_str) > 35:
+        return False
+        
+    return True
+
 @st.cache_data
 def build_clinical_medication_index():
     synonyms_data = {}
@@ -129,37 +150,36 @@ def build_clinical_medication_index():
         u_id = drug_id.upper()
         info = drug_info.get(drug_id, {})
         
-        # 1. STRICT DISPLAY NAME RESOLUTION
         display_name = ""
+        
+        # 1. Try to get clean name from drug_info.json
         if isinstance(info, dict):
-            # Prioritize the clean 'name' field
-            display_name = info.get("name", "").strip()
-            # Fallback 1: generic_name
-            if not display_name:
-                display_name = info.get("generic_name", "").strip()
-                
-        # Fallback 2: Synonyms (But filter out IUPAC chemical structures!)
+            candidate = info.get("name", "").strip()
+            if is_valid_drug_name(candidate):
+                display_name = candidate
+            else:
+                candidate_gen = info.get("generic_name", "").strip()
+                if is_valid_drug_name(candidate_gen):
+                    display_name = candidate_gen
+                    
+        # 2. If not found, check synonyms for a valid clean name
         if not display_name:
             syns = synonyms_data.get(drug_id, [])
             for s in syns:
-                # If name doesn't contain chemical symbols like (+), -, [, ], numbers
-                if not any(char in str(s) for char in ['+', '-', '(', ')', '[', ']', '1', '2', '3', '4']):
+                if is_valid_drug_name(s):
                     display_name = str(s).strip()
                     break
-            # Last resort
-            if not display_name and syns:
-                display_name = str(syns[0]).strip()
-            elif not display_name:
-                continue # Skip if completely unidentifiable
-                
+                    
+        # If after all checks we don't have a clean medical name, SKIP this entry entirely!
+        if not display_name or not is_valid_drug_name(display_name):
+            continue
+            
         display_name = display_name.capitalize()
         
-        # 2. COLLECT HIDDEN SEARCH ALIASES
+        # Collect search aliases (synonyms can include chemical names for background searching)
         search_aliases = {display_name.lower()}
-        
         for syn in synonyms_data.get(drug_id, []):
             search_aliases.add(str(syn).lower())
-            
         if isinstance(info, dict):
             for key in ['generic_name', 'brand_names', 'synonyms']:
                 val = info.get(key)
@@ -168,7 +188,6 @@ def build_clinical_medication_index():
                 elif isinstance(val, str):
                     for v in val.split(','): search_aliases.add(v.strip().lower())
         
-        # Normalize aliases (remove punctuation/extra spaces for searching)
         cleaned_aliases = set()
         for alias in search_aliases:
             if alias:
@@ -218,7 +237,6 @@ def render_medication_search_flow(label, index, key_prefix):
     
     filtered_pool = []
     if not normalized_query:
-        # Prevent rendering all 100k items if empty, just show top 500 clean names
         count = 0
         for d_id, metadata in index.items():
             filtered_pool.append((metadata["display_name"], d_id))
@@ -229,7 +247,6 @@ def render_medication_search_flow(label, index, key_prefix):
             if any(normalized_query in alias for alias in metadata["search_aliases"]):
                 filtered_pool.append((metadata["display_name"], d_id))
                 
-    # Sort uniquely by display name to avoid duplicates
     unique_pool = {}
     for name, d_id in filtered_pool:
         if name not in unique_pool:
