@@ -1,4 +1,4 @@
-import streamlit as st
+importimport streamlit as st
 import pandas as pd
 import sqlite3
 import requests
@@ -60,42 +60,47 @@ def load_helper_data():
         with open(food_file_name, 'r', encoding='utf-8') as f:
             food_data = f.read()
             
-    # بناء قائمة نظيفة بالأسماء مرتبة أبجدياً للـ Selectbox
-    dropdown_list = []
-    id_to_name = {}
+    # بناء الخرائط والقوائم بشكل موسع لدعم الأسماء العلمية والتجارية معاً بدون أرقام
+    dropdown_set = set()
+    name_to_id = {}
+    id_to_primary_name = {}
+    
     for drug_id, syn_list in synonyms.items():
         if syn_list:
-            # نأخذ أول اسم كإسم أساسي ونعرض الـ ID بجانبه للمصداقية الطبية
-            primary_name = str(syn_list[0]).strip().capitalize()
-            display_string = f"{primary_name} ({drug_id.upper()})"
-            dropdown_list.append(display_string)
-            id_to_name[drug_id.upper()] = primary_name
-            # ربط كل المترادفات الأخرى بنفس المعرف لضمان دقة البحث بالخلفية
+            u_id = drug_id.upper()
+            primary = str(syn_list[0]).strip().capitalize()
+            id_to_primary_name[u_id] = primary
+            
+            # إدراج كل الأسماء المترادفة (العلمية والتجارية) في قائمة البحث
             for syn in syn_list:
-                id_to_name[str(syn).strip().lower()] = drug_id.upper()
-                
-    return synonyms, food_data, sorted(dropdown_list), id_to_name
+                clean_name = str(syn).strip().capitalize()
+                if clean_name:
+                    dropdown_set.add(clean_name)
+                    name_to_id[clean_name.lower()] = u_id
+                    
+    return food_data, sorted(list(dropdown_set)), name_to_id, id_to_primary_name
 
-synonyms_dict, food_interactions_text, sorted_drugs_list, name_to_id_map = load_helper_data()
+food_interactions_text, sorted_drugs_list, name_to_id_map, id_to_name_map = load_helper_data()
 
-# دالة لتنظيف الرموز الطبية المزعجة وجعل النص احترافي
-def clean_interaction_text(text, drug1_name, drug2_name):
+# دالة مطورة لتنظيف النص واستبدال الفراغات باسم الدواء النظيف
+def clean_interaction_text(text, target_drug_name):
     if not text:
         return ""
-    # إزالة الرموز مثل (.*) أو تعبيرات النوت بوك القديمة
-    cleaned = re.sub(r'\(\.\*\)', '', text)
+    cleaned = re.sub(r'\(\.\*\)', f" {target_drug_name} ", text)
     cleaned = cleaned.replace("the risk or severity of", "The risk of")
+    cleaned = cleaned.replace("when is combined with .", f"when combined with {target_drug_name}.")
+    cleaned = cleaned.replace("when combined with .", f"when combined with {target_drug_name}.")
+    
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    if cleaned and not cleaned.endswith('.'):
+        cleaned += '.'
     return cleaned
 
-# دالة ذكية لتحديد مستوى الخطورة وتلوينها طبيعياً
 def get_severity_color(text):
     text_lower = text.lower()
-    # كلمات مفتاحية تدل على خطورة عالية جداً
-    if any(w in text_lower for w in ["bleeding", "arrhythmia", "qtc prolongation", "toxicity", "fatal", "severe"]):
+    if any(w in text_lower for w in ["bleeding", "arrhythmia", "qtc prolongation", "toxicity", "fatal", "severe", "hemorrhage"]):
         return "🔴 High Risk"
-    # كلمات تدل على خطورة متوسطة أو تعديل جرعات
-    elif any(w in text_lower for w in ["decrease the therapeutic efficacy", "increase the excretion rate"]):
+    elif any(w in text_lower for w in ["decrease the therapeutic efficacy", "increase the excretion rate", "risk of adverse effects"]):
         return "🟡 Moderate Caution"
     else:
         return "🔵 Monitor / Information"
@@ -116,50 +121,61 @@ if db_conn:
     with tab1:
         st.subheader("Comprehensive Drug Profile Lookup")
         selected_drug_profile = st.selectbox(
-            "Select or Type a Drug Name:", 
+            "Select or Type a Drug Name (Scientific or Brand):", 
             options=[""] + sorted_drugs_list, 
             index=0,
             key="profile_select"
         )
         
         if selected_drug_profile:
-            # استخراج الـ ID من بين الأقواس
-            target_id = selected_drug_profile.split('(')[-1].replace(')', '').strip().upper()
-            current_drug_name = selected_drug_profile.split('(')[0].strip()
+            target_id = name_to_id_map.get(selected_drug_profile.lower())
             
-            query = "SELECT * FROM interactions WHERE \"Drug1 ID\" = ? OR \"Drug2 ID\" = ?"
-            df_res = pd.read_sql_query(query, db_conn, params=(target_id, target_id))
-            
-            if not df_res.empty:
-                # مصفوفة لتجهيز البيانات للعرض النظيف
-                processed_data = []
-                for _, row in df_res.iterrows():
-                    d1_id = str(row['Drug1 ID']).upper()
-                    d2_id = str(row['Drug2 ID']).upper()
-                    
-                    # معرفة اسم الدواء المقابل المكتشف
-                    other_id = d2_id if d1_id == target_id else d1_id
-                    other_name = name_to_id_map.get(other_id, "Unknown Drug")
-                    
-                    raw_text = row['Interaction']
-                    clean_text = clean_interaction_text(raw_text, current_drug_name, other_name)
-                    severity = get_severity_color(clean_text)
-                    
-                    processed_data.append({
-                        "Interacting Drug": f"{other_name} ({other_id})",
-                        "Clinical Severity": severity,
-                        "Medical Description / Effect": clean_text
-                    })
+            if target_id:
+                query = "SELECT * FROM interactions WHERE \"Drug1 ID\" = ? OR \"Drug2 ID\" = ?"
+                df_res = pd.read_sql_query(query, db_conn, params=(target_id, target_id))
                 
-                df_clean = pd.DataFrame(processed_data)
-                
-                # إحصائيات سريعة
-                c1, c2 = st.columns(2)
-                c1.metric(f"Total Interactions for {current_drug_name}", len(df_clean))
-                
-                st.dataframe(df_clean, use_container_width=True, hide_index=True)
+                if not df_res.empty:
+                    processed_data = []
+                    for _, row in df_res.iterrows():
+                        d1_id = str(row['Drug1 ID']).upper()
+                        d2_id = str(row['Drug2 ID']).upper()
+                        
+                        other_id = d2_id if d1_id == target_id else d1_id
+                        # جلب الاسم الصريح النظيف المقابل بدون معرّفات رقمية
+                        other_name = id_to_name_map.get(other_id, "Registered Medication")
+                        
+                        raw_text = row['Interaction']
+                        clean_text = clean_interaction_text(raw_text, other_name)
+                        severity = get_severity_color(clean_text)
+                        
+                        processed_data.append({
+                            "Interacting Drug": other_name,
+                            "Clinical Severity": severity,
+                            "Medical Description / Effect": clean_text
+                        })
+                    
+                    df_clean = pd.DataFrame(processed_data)
+                    
+                    # أزرار التصفية والفلترة الذكية
+                    severity_filter = st.radio(
+                        "Filter by Severity Level:",
+                        options=["All Interactions", "🔴 High Risk Only", "🟡 Moderate Caution Only", "🔵 Monitor / Info Only"],
+                        horizontal=True
+                    )
+                    
+                    if "🔴" in severity_filter:
+                        df_clean = df_clean[df_clean["Clinical Severity"] == "🔴 High Risk"]
+                    elif "🟡" in severity_filter:
+                        df_clean = df_clean[df_clean["Clinical Severity"] == "🟡 Moderate Caution"]
+                    elif "🔵" in severity_filter:
+                        df_clean = df_clean[df_clean["Clinical Severity"] == "🔵 Monitor / Information"]
+                    
+                    st.metric(f"Filtered Results", len(df_clean))
+                    st.dataframe(df_clean, use_container_width=True, hide_index=True)
+                else:
+                    st.warning(f"No clinical interactions registered for {selected_drug_profile}.")
             else:
-                st.warning(f"No clinical interactions registered for {selected_drug_profile}.")
+                st.error("Error retrieving internal database reference for this drug.")
 
     # --- TAB 2: DRUG VS DRUG CHECKER ---
     with tab2:
@@ -171,37 +187,32 @@ if db_conn:
             drug_selection_b = st.selectbox("Medication B:", options=[""] + sorted_drugs_list, key="sel_b")
             
         if drug_selection_a and drug_selection_b:
-            id_a = drug_selection_a.split('(')[-1].replace(')', '').strip().upper()
-            id_b = drug_selection_b.split('(')[-1].replace(')', '').strip().upper()
-            name_a = drug_selection_a.split('(')[0].strip()
-            name_b = drug_selection_b.split('(')[0].strip()
+            id_a = name_to_id_map.get(drug_selection_a.lower())
+            id_b = name_to_id_map.get(drug_selection_b.lower())
             
-            if id_a == id_b:
-                st.warning("Please select two different medications to check for cross-interaction.")
-            else:
-                query = """
-                SELECT * FROM interactions 
-                WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) 
-                   OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)
-                """
-                df_pair = pd.read_sql_query(query, db_conn, params=(id_a, id_b, id_b, id_a))
-                
-                if not df_pair.empty:
-                    raw_interaction = df_pair.iloc[0]['Interaction']
-                    cleaned_interaction = clean_interaction_text(raw_interaction, name_a, name_b)
-                    severity_status = get_severity_color(cleaned_interaction)
+            if id_a and id_b:
+                if id_a == id_b:
+                    st.warning("Please select two different medications to check for cross-interaction.")
+                else:
+                    query = """
+                    SELECT * FROM interactions 
+                    WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) 
+                       OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)
+                    """
+                    df_pair = pd.read_sql_query(query, db_conn, params=(id_a, id_b, id_b, id_a))
                     
-                    st.error("⚠️ Clinical Interaction Alert Detected!")
-                    
-                    # إظهار التنبيه ملون حسب الخطورة بطريقة رائعة
-                    if "🔴" in severity_status:
+                    if not df_pair.empty:
+                        raw_interaction = df_pair.iloc[0]['Interaction']
+                        cleaned_interaction = clean_interaction_text(raw_interaction, drug_selection_b)
+                        severity_status = get_severity_color(cleaned_interaction)
+                        
+                        st.error("⚠️ Clinical Interaction Alert Detected!")
                         st.markdown(f"🚨 **Severity:** {severity_status}")
                         st.markdown(f"🛑 **Clinical Effect:** {cleaned_interaction}")
-                    elif " An" in severity_status or "🟡" in severity_status:
-                        st.markdown(f"⚠️ **Severity:** {severity_status}")
-                        st.markdown(f"🔸 **Clinical Effect:** {cleaned_interaction}")
-                else:
-                    st.success(f"✅ **Safe Combination:** No direct clinical interaction found between {name_a} and {name_b} in the system.")
+                    else:
+                        st.success(f"✅ **Safe Combination:** No direct clinical interaction found between {drug_selection_a} and {drug_selection_b} in the system.")
+            else:
+                st.error("One or both selected medications are invalid.")
 
     # --- TAB 3: DRUG-FOOD INTERACTIONS ---
     with tab3:
