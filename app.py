@@ -1,27 +1,67 @@
 import streamlit as st
 import pandas as pd
-import gdown
+import sqlite3
+import requests
+import zipfile
 import os
 import json
 
 st.set_page_config(
-    page_title="RxShield | Clinical Decision",
+    page_title="RxShield | Clinical Decision Support",
     page_icon="🛡️",
     layout="wide"
 )
 
-st.title("🛡️ تطبيق RxShield لفحص التداخلات الدوائية")
+st.title("🛡️ RxShield | Drug Interaction Checker")
 
-# تعريف كلاس المحرك مباشرة داخل الملف لتجنب أي مشاكل استيراد
+# ========================================================
+# 1. GitHub Repository Storage Configuration
+# ========================================================
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/mustafaamer97/RxShield/main"
+ZIP_FILE_URL = f"{GITHUB_RAW_URL}/all_id_interaction.zip"
+
+DB_ZIP_PATH = "all_id_interaction.zip"
+DB_FILE_PATH = "all_id_interaction.db"
+
+# ========================================================
+# 2. Database Downloader & Extractor Function
+# ========================================================
+@st.cache_resource
+def init_database():
+    # If the database file doesn't exist locally, download and unzip it
+    if not os.path.exists(DB_FILE_PATH):
+        with st.spinner('⏳ Initializing large database from GitHub (This happens only once)...'):
+            # Download the zip file
+            response = requests.get(ZIP_FILE_URL, stream=True)
+            if response.status_code == 200:
+                with open(DB_ZIP_PATH, 'wb') as f:
+                    f.write(response.content)
+                
+                # Extract the zip file
+                with zipfile.ZipFile(DB_ZIP_PATH, 'r') as zip_ref:
+                    zip_ref.extractall(".")
+                
+                # Clean up the zip file to save space
+                if os.path.exists(DB_ZIP_PATH):
+                    os.remove(DB_ZIP_PATH)
+            else:
+                st.error("❌ Failed to download the database from GitHub. Please check if the file exists in your repository.")
+                return None
+    
+    # Connect to the SQLite database
+    conn = sqlite3.connect(DB_FILE_PATH, check_same_thread=False)
+    return conn
+
+# ========================================================
+# 3. RxShield Search Engine Class
+# ========================================================
 class RxShieldEngine:
     def __init__(self):
         self.drug_info = {}
         self.synonyms = {}
-        self.food_db = {}
-        self.ddi_df = None
 
-    def load_data(self):
-        # تحميل ملفات الـ JSON الموجودة عندك في المستودع إذا لزم الأمر
+    def load_json_data(self):
+        # Load companion JSON files if they exist in the repository
         if os.path.exists('drug_info.json'):
             with open('drug_info.json', 'r', encoding='utf-8') as f:
                 self.drug_info = json.load(f)
@@ -30,28 +70,26 @@ class RxShieldEngine:
             with open('drugs_synonyms.json', 'r', encoding='utf-8') as f:
                 self.synonyms = json.load(f)
 
-# رابط ملف الـ 150 ميجابايت على جوجل درايف
-file_id = "1FEhCYlAOewAfCaBAyyncDDIvQJoo8G3x"
-url = f'https://drive.google.com/uc?id={file_id}'
-output = 'all_id_interaction.csv'
-
-@st.cache_data
-def load_large_database():
-    if not os.path.exists(output):
-        with st.spinner('جاري تحميل قاعدة البيانات الكبيرة من جوجل درايف، يرجى الانتظار قليلاً...'):
-            gdown.download(url, output, quiet=False)
-    df = pd.read_csv(output)
-    return df
-
-# تشغيل المحرك وتحميل البيانات
+# Initialize the engine
 engine = RxShieldEngine()
-engine.load_data()
+engine.load_json_data()
 
-df = load_large_database()
+# Initialize connection to the SQLite database
+db_conn = init_database()
 
-st.success("تم تشغيل التطبيق وقاعدة البيانات بنجاح تام!")
-st.write(f"إجمالي عدد التداخلات في القاعدة: {df.shape[0]} صف")
+if db_conn:
+    st.success("🎉 Application started and connected to database successfully!")
+    
+    # Try to fetch a preview sample from the database
+    try:
+        # Assuming the table name inside the DB is 'all_id_interaction'
+        df_sample = pd.read_sql_query("SELECT * FROM all_id_interaction LIMIT 5;", db_conn)
+        
+        st.write("### 📊 Database Preview Sample:")
+        st.dataframe(df_sample)
+    except Exception as e:
+        st.warning(f"⚠️ Connected to DB, but failed to read table (Table name might be different): {e}")
+else:
+    st.error("⚙️ Something went wrong while initializing the database connection.")
 
-# عرض عينة من البيانات للتأكد
-st.dataframe(df.head())
 
