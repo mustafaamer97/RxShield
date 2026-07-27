@@ -102,24 +102,31 @@ def init_database():
 db_conn = init_database()
 
 # ========================================================
-# 2. STRICT DATA ENGINEERING: Filter Out IUPAC Chemicals
+# 2. STRICT DATA ENGINEERING: Ultra-Strict Chemical Filter
 # ========================================================
 def is_valid_drug_name(name):
-    """Returns True only if the name looks like a real medication name, not a chemical formula."""
+    """Returns True only if the name is a clean commercial or generic medication name."""
     if not name or len(name) < 2:
         return False
     name_str = str(name).strip()
+    name_lower = name_str.lower()
     
-    # Reject if it contains typical IUPAC / chemical indicators
+    # 1. Reject chemical suffixes or structural terms
+    if name_lower.endswith('acid') or ' acid' in name_lower:
+        return False
+    if any(term in name_lower for term in ['heme', 'cholesterol', 'diiodo', 'diamino', 'nonanoic', 'propionic']):
+        return False
+        
+    # 2. Reject names with chemical locants like numbers with commas or hyphens (e.g., 3,5- or 7,8-)
+    if re.search(r'\d+,\d+', name_str) or re.search(r'^[0-9]+[,\-]', name_str):
+        return False
+        
+    # 3. Reject structural symbols
     iupac_symbols = ['(', ')', '[', ']', '{', '}', '+', '=', '<', '>', ';', '\\', '/']
     if any(char in name_str for char in iupac_symbols):
         return False
         
-    # Reject if it starts with numbers or chemical locants like "2-", "1r-"
-    if re.match(r'^[0-9]+[\-\s]', name_str) or re.match(r'^\([0-9a-z]+\)', name_str):
-        return False
-        
-    # Reject if it's excessively long (typical drug names are concise)
+    # 4. Length constraint
     if len(name_str) > 35:
         return False
         
@@ -152,7 +159,7 @@ def build_clinical_medication_index():
         
         display_name = ""
         
-        # 1. Try to get clean name from drug_info.json
+        # 1. Check drug_info name field
         if isinstance(info, dict):
             candidate = info.get("name", "").strip()
             if is_valid_drug_name(candidate):
@@ -162,7 +169,7 @@ def build_clinical_medication_index():
                 if is_valid_drug_name(candidate_gen):
                     display_name = candidate_gen
                     
-        # 2. If not found, check synonyms for a valid clean name
+        # 2. Check synonyms
         if not display_name:
             syns = synonyms_data.get(drug_id, [])
             for s in syns:
@@ -170,13 +177,11 @@ def build_clinical_medication_index():
                     display_name = str(s).strip()
                     break
                     
-        # If after all checks we don't have a clean medical name, SKIP this entry entirely!
         if not display_name or not is_valid_drug_name(display_name):
             continue
             
         display_name = display_name.capitalize()
         
-        # Collect search aliases (synonyms can include chemical names for background searching)
         search_aliases = {display_name.lower()}
         for syn in synonyms_data.get(drug_id, []):
             search_aliases.add(str(syn).lower())
