@@ -1,4 +1,4 @@
-importimport streamlit as st
+import streamlit as st
 import pandas as pd
 import sqlite3
 import requests
@@ -60,7 +60,6 @@ def load_helper_data():
         with open(food_file_name, 'r', encoding='utf-8') as f:
             food_data = f.read()
             
-    # بناء الخرائط والقوائم بشكل موسع لدعم الأسماء العلمية والتجارية معاً بدون أرقام
     dropdown_set = set()
     name_to_id = {}
     id_to_primary_name = {}
@@ -71,7 +70,6 @@ def load_helper_data():
             primary = str(syn_list[0]).strip().capitalize()
             id_to_primary_name[u_id] = primary
             
-            # إدراج كل الأسماء المترادفة (العلمية والتجارية) في قائمة البحث
             for syn in syn_list:
                 clean_name = str(syn).strip().capitalize()
                 if clean_name:
@@ -82,7 +80,6 @@ def load_helper_data():
 
 food_interactions_text, sorted_drugs_list, name_to_id_map, id_to_name_map = load_helper_data()
 
-# دالة مطورة لتنظيف النص واستبدال الفراغات باسم الدواء النظيف
 def clean_interaction_text(text, target_drug_name):
     if not text:
         return ""
@@ -141,7 +138,6 @@ if db_conn:
                         d2_id = str(row['Drug2 ID']).upper()
                         
                         other_id = d2_id if d1_id == target_id else d1_id
-                        # جلب الاسم الصريح النظيف المقابل بدون معرّفات رقمية
                         other_name = id_to_name_map.get(other_id, "Registered Medication")
                         
                         raw_text = row['Interaction']
@@ -156,7 +152,6 @@ if db_conn:
                     
                     df_clean = pd.DataFrame(processed_data)
                     
-                    # أزرار التصفية والفلترة الذكية
                     severity_filter = st.radio(
                         "Filter by Severity Level:",
                         options=["All Interactions", "🔴 High Risk Only", "🟡 Moderate Caution Only", "🔵 Monitor / Info Only"],
