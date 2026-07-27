@@ -7,6 +7,7 @@ import os
 import json
 import re
 import string
+from itertools import combinations
 
 # ========================================================
 # 0. Page Config & Professional UI Injection
@@ -105,28 +106,22 @@ db_conn = init_database()
 # 2. STRICT DATA ENGINEERING: Ultra-Strict Chemical Filter
 # ========================================================
 def is_valid_drug_name(name):
-    """Returns True only if the name is a clean commercial or generic medication name."""
     if not name or len(name) < 2:
         return False
     name_str = str(name).strip()
     name_lower = name_str.lower()
     
-    # 1. Reject chemical suffixes or structural terms
     if name_lower.endswith('acid') or ' acid' in name_lower:
         return False
     if any(term in name_lower for term in ['heme', 'cholesterol', 'diiodo', 'diamino', 'nonanoic', 'propionic']):
         return False
-        
-    # 2. Reject names with chemical locants like numbers with commas or hyphens (e.g., 3,5- or 7,8-)
     if re.search(r'\d+,\d+', name_str) or re.search(r'^[0-9]+[,\-]', name_str):
         return False
         
-    # 3. Reject structural symbols
     iupac_symbols = ['(', ')', '[', ']', '{', '}', '+', '=', '<', '>', ';', '\\', '/']
     if any(char in name_str for char in iupac_symbols):
         return False
         
-    # 4. Length constraint
     if len(name_str) > 35:
         return False
         
@@ -158,8 +153,6 @@ def build_clinical_medication_index():
         info = drug_info.get(drug_id, {})
         
         display_name = ""
-        
-        # 1. Check drug_info name field
         if isinstance(info, dict):
             candidate = info.get("name", "").strip()
             if is_valid_drug_name(candidate):
@@ -169,7 +162,6 @@ def build_clinical_medication_index():
                 if is_valid_drug_name(candidate_gen):
                     display_name = candidate_gen
                     
-        # 2. Check synonyms
         if not display_name:
             syns = synonyms_data.get(drug_id, [])
             for s in syns:
@@ -204,7 +196,8 @@ def build_clinical_medication_index():
         med_index[u_id] = {
             "display_name": display_name,
             "search_aliases": cleaned_aliases,
-            "drug_id": u_id
+            "drug_id": u_id,
+            "raw_info": info if isinstance(info, dict) else {}
         }
         
     return food_data, med_index
@@ -279,15 +272,37 @@ def render_medication_search_flow(label, index, key_prefix):
 # 4. Main User Interface
 # ========================================================
 if db_conn:
-    tab1, tab2, tab3 = st.tabs(["🔬 Single Formulation Profiler", "⚔️ Cross-Match Binary Interaction Checker", "🥦 Nutritional Constraints"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🔬 Single Formulation Profiler", 
+        "⚔️ Binary Interaction Checker", 
+        "💊 Multi-Drug Regimen Safety Matrix",
+        "🥦 Nutritional Constraints"
+    ])
     
-    # --- TAB 1: SMART SINGLE DRUG SEARCH ---
+    # --- TAB 1: SMART SINGLE DRUG SEARCH & MONOGRAPH ---
     with tab1:
         st.markdown("<div class='med-card'>", unsafe_allow_html=True)
         target_id, current_drug_name = render_medication_search_flow("Target Clinical Drug", med_index, "single")
         st.markdown("</div>", unsafe_allow_html=True)
         
         if target_id:
+            # Rich Clinical Monograph Card from drug_info.json
+            meta_dict = med_index.get(target_id, {})
+            raw_info = meta_dict.get("raw_info", {})
+            
+            st.markdown("<div class='med-card'>", unsafe_allow_html=True)
+            st.markdown(f"### 📋 Clinical Monograph: {current_drug_name}")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.markdown(f"**Generic Name:** {raw_info.get('generic_name', current_drug_name)}")
+                brands = raw_info.get('brand_names', [])
+                if isinstance(brands, list) and brands:
+                    st.markdown(f"**Brand Formulations:** {', '.join(brands[:5])}")
+            with col_b:
+                desc = raw_info.get('description', 'Verified standard active pharmaceutical ingredient profile.')
+                st.markdown(f"**Therapeutic Overview:** {desc[:250]}...")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
             query = "SELECT * FROM interactions WHERE \"Drug1 ID\" = ? OR \"Drug2 ID\" = ?"
             df_res = pd.read_sql_query(query, db_conn, params=(target_id, target_id))
             
@@ -346,8 +361,57 @@ if db_conn:
                     st.success(f"✅ Safe Therapeutic Pathway: No direct contraindications mapped between {name_a} and {name_b}.")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- TAB 3: DRUG-FOOD INTERACTIONS ---
+    # --- TAB 3: MULTI-DRUG REGIMEN SAFETY MATRIX ---
     with tab3:
+        st.markdown("<div class='med-card'>", unsafe_allow_html=True)
+        st.markdown("### 💊 Comprehensive Patient Medication Regimen Screening")
+        st.markdown("Select multiple medications currently prescribed to the patient to evaluate all cross-interactions simultaneously.")
+        
+        # Multiselect widget for regimen
+        sorted_med_options = sorted([(m["display_name"], d_id) for d_id, m in med_index.items()], key=lambda x: x[0])
+        selected_regimen = st.multiselect(
+            "Select Patient Regimen Formulations:",
+            options=sorted_med_options,
+            format_func=lambda x: x[0],
+            key="regimen_multiselect"
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        if selected_regimen and len(selected_regimen) >= 2:
+            st.markdown("<div class='med-card'>", unsafe_allow_html=True)
+            st.markdown("#### 📊 Regimen Cross-Pairwise Interaction Results")
+            
+            regimen_pairs = list(combinations(selected_regimen, 2))
+            regimen_results = []
+            
+            for (name_1, id_1), (name_2, id_2) in regimen_pairs:
+                q_reg = "SELECT * FROM interactions WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)"
+                df_r = pd.read_sql_query(q_reg, db_conn, params=(id_1, id_2, id_2, id_1))
+                
+                if not df_r.empty:
+                    txt = clean_interaction_text(df_r.iloc[0]['Interaction'], name_2)
+                    sev = get_severity_color(txt)
+                    regimen_results.append({
+                        "Drug Pair": f"{name_1} + {name_2}",
+                        "Severity Status": sev,
+                        "Documented Clinical Mechanism": txt
+                    })
+                else:
+                    regimen_results.append({
+                        "Drug Pair": f"{name_1} + {name_2}",
+                        "Severity Status": "✅ Safe / No Interaction",
+                        "Documented Clinical Mechanism": "No documented contraindications between this pair."
+                    })
+            
+            df_regimen_summary = pd.DataFrame(regimen_results)
+            st.metric(label="Total Combinations Evaluated", value=len(regimen_pairs))
+            st.dataframe(df_regimen_summary, use_container_width=True, hide_index=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        elif selected_regimen and len(selected_regimen) == 1:
+            st.info("ℹ️ Please select at least two medications to generate pairwise regimen interactions.")
+
+    # --- TAB 4: DRUG-FOOD INTERACTIONS ---
+    with tab4:
         st.markdown("<div class='med-card'>", unsafe_allow_html=True)
         food_search = st.text_input("🥗 Query lifestyle or nutritional constraints (e.g., Grapefruit, Warfarin):").strip()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -365,3 +429,4 @@ else:
     st.error("⚙️ Connection Error.")
 
 st.markdown("<div class='app-footer'>RxShield CDSS Engine Tier-1 • Platform Build v2026.4.12 • Verified Clinical Ledger</div>", unsafe_allow_html=True)
+
