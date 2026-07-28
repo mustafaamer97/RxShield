@@ -218,14 +218,23 @@ def build_clinical_medication_index():
 food_interactions_text, med_index = build_clinical_medication_index()
 
 # ========================================================
-# 3. Core Engine Functions
+# 3. Core Engine Functions (Fixed Placeholder Replacement Bug)
 # ========================================================
-def clean_interaction_text(text, target_drug_name):
+def clean_interaction_text(text, drug1_name, drug2_name=None):
     if not text: return ""
-    cleaned = re.sub(r'\(\.\*\)', f" {target_drug_name} ", text)
+    if drug2_name is None:
+        drug2_name = drug1_name
+        
+    counter = [0]
+    def replace_placeholder(match):
+        counter[0] += 1
+        if counter[0] == 1:
+            return f" {drug1_name} "
+        else:
+            return f" {drug2_name} "
+            
+    cleaned = re.sub(r'\(\.\*\)', replace_placeholder, text)
     cleaned = cleaned.replace("the risk or severity of", "The risk of")
-    cleaned = cleaned.replace("when is combined with .", f"when combined with {target_drug_name}.")
-    cleaned = cleaned.replace("when combined with .", f"when combined with {target_drug_name}.")
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned + '.' if cleaned and not cleaned.endswith('.') else cleaned
 
@@ -323,10 +332,14 @@ if db_conn:
                 if not df_res.empty:
                     processed_data = []
                     for _, row in df_res.iterrows():
-                        other_id = str(row['Drug2 ID']).upper() if str(row['Drug1 ID']).upper() == target_id else str(row['Drug1 ID']).upper()
-                        other_name = med_index[other_id]["display_name"] if other_id in med_index else "Registered Medication"
+                        r_d1 = str(row['Drug1 ID']).upper()
+                        r_d2 = str(row['Drug2 ID']).upper()
+                        d1_n = med_index[r_d1]["display_name"] if r_d1 in med_index else "Medication"
+                        d2_n = med_index[r_d2]["display_name"] if r_d2 in med_index else "Medication"
                         
-                        clean_text = clean_interaction_text(row['Interaction'], other_name)
+                        other_name = d2_n if r_d1 == target_id else d1_n
+                        clean_text = clean_interaction_text(row['Interaction'], d1_n, d2_n)
+                        
                         processed_data.append({
                             "Interacting Drug Formulation": other_name,
                             "Clinical Severity Status": get_severity_color(clean_text),
@@ -345,7 +358,6 @@ if db_conn:
                     st.metric(label="Total Cross-Referenced Vectors", value=len(df_clean))
                     st.markdown("---")
                     
-                    # Render Cards instead of Table
                     for _, r in df_clean.iterrows():
                         sev = r["Clinical Severity Status"]
                         badge_class = "badge-high" if "High" in sev else ("badge-moderate" if "Moderate" in sev else "badge-monitor")
@@ -381,7 +393,12 @@ if db_conn:
                     
                     st.markdown("<div class='med-card'>", unsafe_allow_html=True)
                     if not df_pair.empty:
-                        cleaned_interaction = clean_interaction_text(df_pair.iloc[0]['Interaction'], name_b)
+                        r_d1 = str(df_pair.iloc[0]['Drug1 ID']).upper()
+                        r_d2 = str(df_pair.iloc[0]['Drug2 ID']).upper()
+                        d1_n = med_index[r_d1]["display_name"] if r_d1 in med_index else name_a
+                        d2_n = med_index[r_d2]["display_name"] if r_d2 in med_index else name_b
+                        
+                        cleaned_interaction = clean_interaction_text(df_pair.iloc[0]['Interaction'], d1_n, d2_n)
                         severity_status = get_severity_color(cleaned_interaction)
                         
                         if "🔴" in severity_status: badge_c = "badge-high"
@@ -437,7 +454,12 @@ if db_conn:
                     df_r = pd.read_sql_query(q_reg, db_conn, params=(id_1, id_2, id_2, id_1))
                     
                     if not df_r.empty:
-                        txt = clean_interaction_text(df_r.iloc[0]['Interaction'], name_2)
+                        r_d1 = str(df_r.iloc[0]['Drug1 ID']).upper()
+                        r_d2 = str(df_r.iloc[0]['Drug2 ID']).upper()
+                        d1_n = med_index[r_d1]["display_name"] if r_d1 in med_index else name_1
+                        d2_n = med_index[r_d2]["display_name"] if r_d2 in med_index else name_2
+                        
+                        txt = clean_interaction_text(df_r.iloc[0]['Interaction'], d1_n, d2_n)
                         sev = get_severity_color(txt)
                         regimen_results.append({
                             "Pair": f"{name_1} + {name_2}",
@@ -454,7 +476,6 @@ if db_conn:
                 st.metric(label="Total Combinations Evaluated", value=len(regimen_pairs))
                 st.markdown("---")
                 
-                # Render Cards for Regimen Pairs
                 for item in regimen_results:
                     sev = item["Severity"]
                     if "High" in sev or "🔴" in sev: b_class = "badge-high"
