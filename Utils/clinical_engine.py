@@ -4,6 +4,7 @@ import streamlit as st
 # Import pre-compiled regex objects and clinical rules from your utility modules
 from utils.clinical_patterns import *
 from utils.clinical_rules import *
+from utils.clinical_knowledge import CLINICAL_EFFECTS
 
 def clean_interaction_text(text, drug1_name, drug2_name=None):
     """
@@ -34,6 +35,16 @@ def get_severity_color(text):
     elif any(w in text_lower for w in ["decrease the therapeutic efficacy", "increase the excretion rate", "risk of adverse effects"]):
         return "🟨 MODERATE CAUTION"
     return "🟦 MONITOR / INFO"
+
+def lookup_clinical_knowledge(text):
+    """
+    Scans text against the centralized clinical knowledge base.
+    """
+    lower = text.lower()
+    for keyword, data in CLINICAL_EFFECTS.items():
+        if keyword in lower:
+            return data
+    return None
 
 def extract_clinical_effect(raw_text: str):
     """
@@ -72,6 +83,11 @@ def extract_clinical_effect(raw_text: str):
     for keyword, result in keyword_map.items():
         if keyword in lower:
             return result, 0.90
+
+    # Check against centralized clinical knowledge base
+    knowledge = lookup_clinical_knowledge(text)
+    if knowledge:
+        return knowledge["effect"], 0.96
 
     return "Unspecified pharmacological interaction", 0.50
 
