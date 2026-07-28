@@ -16,7 +16,7 @@ METABOLISM_PATTERN = re.compile(
 )
 
 EXCRETION_PATTERN = re.compile(
-    r"excretion (?:rate )?of\s+(.*?)\s+can be",
+    r"excretion(?: rate)? of\s+(.*?)\s+can be",
     re.IGNORECASE
 )
 
