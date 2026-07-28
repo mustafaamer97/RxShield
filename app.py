@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
+import zipfile
+import os
 import string
 import itertools
 
@@ -40,7 +43,7 @@ st.markdown("""
 with st.sidebar:
     st.markdown("<div class='sidebar-brand'>🛡️ RxShield CDSS</div>", unsafe_allow_html=True)
     st.markdown("<div class='sidebar-status-tag'>🟢 ENGINE ONLINE & SECURED</div>", unsafe_allow_html=True)
-    st.markdown("### 📊 System Diagnostics\n**Core Pipeline Layer:** Direct Pandas Processing\n**Architecture:** Flat File DataFrame Active")
+    st.markdown("### 📊 System Diagnostics\n**Core Pipeline Layer:** Compressed SQLite Stream\n**Architecture:** Zip-Extractor Pipeline Active")
 
 st.markdown("""
 <div class='sticky-header'>
@@ -50,15 +53,42 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ========================================================
-# 2. Data Loading (Modified for Debugging / Test 2)
+# 2. Data Loading (Extracting SQLite from ZIP in-memory)
 # ========================================================
 @st.cache_data
 def load_local_data():
+    zip_path = "all_id_interaction.zip"
+    extract_dir = "extracted_db"
+    db_name = "drug_interactions.db"
+    db_path = os.path.join(extract_dir, db_name)
+    
     try:
-        df = pd.read_csv("drug_interactions.csv") 
-        st.success("CSV Loaded Successfully") # Test 2: Confirms successful loading
+        # Step A: Extract the zip file if not already extracted
+        if not os.path.exists(db_path):
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                # Find the database file inside the zip regardless of name variations
+                db_files = [f for f in zip_ref.namelist() if f.endswith('.db')]
+                if db_files:
+                    zip_ref.extract(db_files[0], extract_dir)
+                    # If the file inside has a different name, rename it to unified target
+                    os.rename(os.path.join(extract_dir, db_files[0]), db_path)
+                else:
+                    # Fallback if the file inside is actually named something else or a CSV
+                    zip_ref.extractall(extract_dir)
+                    for f in os.listdir(extract_dir):
+                        if f.endswith('.db'):
+                            os.rename(os.path.join(extract_dir, f), db_path)
+                            break
+                            
+        # Step B: Connect to the extracted SQLite database
+        conn = sqlite3.connect(db_path)
+        # Attempting loading from the standard interactions table
+        df = pd.read_sql_query("SELECT * FROM interactions", conn)
+        conn.close()
+        st.success("Zip-Archived Database Loaded and Parsed Successfully!")
     except Exception as e:
-        st.error(f"CSV Load Error: {e}") # Test 2: Shows the exact error if it fails
+        st.error(f"Database Pipeline Error: {e}")
+        # Secondary fallback if extraction environment fails
         df = pd.DataFrame({
             "Drug1 ID": ["DB00731", "DB00959"],
             "Drug1 Name": ["Artemether", "Aspirin"],
@@ -86,11 +116,10 @@ def load_local_data():
 df_interactions, med_index, food_interactions_text = load_local_data()
 
 # ========================================================
-# Diagnostic Printouts (Test 1)
+# Diagnostic Printouts 
 # ========================================================
 st.info("📊 Diagnostic Info Layer Active")
-st.write("Rows in Dataframe:", len(df_interactions))
-st.write("Data Preview:", df_interactions.head())
+st.write("Rows loaded from Compressed Stream:", len(df_interactions))
 st.markdown("---")
 
 # ========================================================
