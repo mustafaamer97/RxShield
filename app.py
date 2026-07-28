@@ -3,7 +3,7 @@ import pandas as pd
 import string
 import itertools
 
-# 1. Import our clinical engine utilities (Reverted as requested)
+# 1. Import our clinical engine utilities
 from utils.clinical_engine import (
     clean_interaction_text,
     get_severity_color,
@@ -50,13 +50,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ========================================================
-# 2. Data Loading (Local CSV instead of db_manager)
+# 2. Data Loading (Modified for Debugging / Test 2)
 # ========================================================
 @st.cache_data
 def load_local_data():
     try:
         df = pd.read_csv("drug_interactions.csv") 
-    except Exception:
+        st.success("CSV Loaded Successfully") # Test 2: Confirms successful loading
+    except Exception as e:
+        st.error(f"CSV Load Error: {e}") # Test 2: Shows the exact error if it fails
         df = pd.DataFrame({
             "Drug1 ID": ["DB00731", "DB00959"],
             "Drug1 Name": ["Artemether", "Aspirin"],
@@ -82,6 +84,14 @@ def load_local_data():
     return df, med_index, food_interactions_text
 
 df_interactions, med_index, food_interactions_text = load_local_data()
+
+# ========================================================
+# Diagnostic Printouts (Test 1)
+# ========================================================
+st.info("📊 Diagnostic Info Layer Active")
+st.write("Rows in Dataframe:", len(df_interactions))
+st.write("Data Preview:", df_interactions.head())
+st.markdown("---")
 
 # ========================================================
 # 3. Filtering Functions
@@ -142,10 +152,7 @@ def display_interaction(row, med_index):
     )
 
     severity = get_severity_color(cleaned)
-
-    # Calling the card render with original parameter architecture
     render_interaction_card(f"{drug1_name} + {drug2_name}", severity, cleaned)
-
 
 # ========================================================
 # 4. App Interface & Tabs
