@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import zipfile
 import os
 import string
 import itertools
@@ -43,7 +42,7 @@ st.markdown("""
 with st.sidebar:
     st.markdown("<div class='sidebar-brand'>🛡️ RxShield CDSS</div>", unsafe_allow_html=True)
     st.markdown("<div class='sidebar-status-tag'>🟢 ENGINE ONLINE & SECURED</div>", unsafe_allow_html=True)
-    st.markdown("### 📊 System Diagnostics\n**Core Pipeline Layer:** Compressed SQLite Stream\n**Architecture:** Zip-Extractor Pipeline Active")
+    st.markdown("### 📊 System Diagnostics\n**Core Pipeline Layer:** Direct SQLite Stream\n**Architecture:** Native DB Connection Active")
 
 st.markdown("""
 <div class='sticky-header'>
@@ -53,42 +52,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ========================================================
-# 2. Data Loading (Extracting SQLite from ZIP in-memory)
+# 2. Data Loading (Direct Connection to SQLite File)
 # ========================================================
 @st.cache_data
 def load_local_data():
-    zip_path = "all_id_interaction.zip"
-    extract_dir = "extracted_db"
-    db_name = "drug_interactions.db"
-    db_path = os.path.join(extract_dir, db_name)
+    # Connecting directly to the file as SQLite database
+    db_path = "all_id_interaction.zip" 
     
     try:
-        # Step A: Extract the zip file if not already extracted
-        if not os.path.exists(db_path):
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                # Find the database file inside the zip regardless of name variations
-                db_files = [f for f in zip_ref.namelist() if f.endswith('.db')]
-                if db_files:
-                    zip_ref.extract(db_files[0], extract_dir)
-                    # If the file inside has a different name, rename it to unified target
-                    os.rename(os.path.join(extract_dir, db_files[0]), db_path)
-                else:
-                    # Fallback if the file inside is actually named something else or a CSV
-                    zip_ref.extractall(extract_dir)
-                    for f in os.listdir(extract_dir):
-                        if f.endswith('.db'):
-                            os.rename(os.path.join(extract_dir, f), db_path)
-                            break
-                            
-        # Step B: Connect to the extracted SQLite database
         conn = sqlite3.connect(db_path)
-        # Attempting loading from the standard interactions table
-        df = pd.read_sql_query("SELECT * FROM interactions", conn)
+        cursor = conn.cursor()
+        
+        # Automatically fetch the internal table name
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        table_name = tables[0][0] if tables else "interactions"
+        
+        # Querying all data
+        df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
         conn.close()
-        st.success("Zip-Archived Database Loaded and Parsed Successfully!")
+        
+        # Standardize column names dynamically
+        rename_map = {}
+        for col in df.columns:
+            cleaned_col = col.lower().replace(" ", "").replace("_", "")
+            if "drug1id" in cleaned_col: rename_map[col] = "Drug1 ID"
+            elif "drug1name" in cleaned_col: rename_map[col] = "Drug1 Name"
+            elif "drug2id" in cleaned_col: rename_map[col] = "Drug2 ID"
+            elif "drug2name" in cleaned_col: rename_map[col] = "Drug2 Name"
+            elif "interaction" in cleaned_col: rename_map[col] = "Interaction"
+            
+        if rename_map:
+            df = df.rename(columns=rename_map)
+            
+        st.success(f"Successfully connected to Database Table: [{table_name}]")
     except Exception as e:
         st.error(f"Database Pipeline Error: {e}")
-        # Secondary fallback if extraction environment fails
+        # Dynamic fallback array
         df = pd.DataFrame({
             "Drug1 ID": ["DB00731", "DB00959"],
             "Drug1 Name": ["Artemether", "Aspirin"],
@@ -105,9 +105,9 @@ def load_local_data():
         d1_id, d1_name = str(row.get('Drug1 ID', '')).upper(), str(row.get('Drug1 Name', ''))
         d2_id, d2_name = str(row.get('Drug2 ID', '')).upper(), str(row.get('Drug2 Name', ''))
         
-        if d1_id and d1_id not in med_index:
+        if d1_id and d1_id != 'NAN' and d1_id not in med_index:
             med_index[d1_id] = {"display_name": d1_name, "search_aliases": [d1_name.lower()]}
-        if d2_id and d2_id not in med_index:
+        if d2_id and d2_id != 'NAN' and d2_id not in med_index:
             med_index[d2_id] = {"display_name": d2_name, "search_aliases": [d2_name.lower()]}
             
     food_interactions_text = "Warfarin: Avoid high Vitamin K foods like spinach.\nAspirin: Take with food to avoid stomach upset."
@@ -116,10 +116,11 @@ def load_local_data():
 df_interactions, med_index, food_interactions_text = load_local_data()
 
 # ========================================================
-# Diagnostic Printouts 
+# Diagnostic Printouts
 # ========================================================
 st.info("📊 Diagnostic Info Layer Active")
-st.write("Rows loaded from Compressed Stream:", len(df_interactions))
+st.write("Total Loaded Clinical Rows:", len(df_interactions))
+st.write("Columns Detected:", list(df_interactions.columns))
 st.markdown("---")
 
 # ========================================================
