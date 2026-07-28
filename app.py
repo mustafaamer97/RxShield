@@ -3,11 +3,11 @@ import pandas as pd
 import string
 import itertools
 
-# 1. Import our clinical engine utilities (Updated to include analyze_interaction)
+# 1. Import our clinical engine utilities (Reverted as requested)
 from utils.clinical_engine import (
     clean_interaction_text,
-    render_interaction_card,
-    analyze_interaction
+    get_severity_color,
+    render_interaction_card
 )
 
 # ========================================================
@@ -141,13 +141,10 @@ def display_interaction(row, med_index):
         drug2_name
     )
 
-    result = analyze_interaction(
-        drug1_name,
-        drug2_name,
-        cleaned
-    )
+    severity = get_severity_color(cleaned)
 
-    render_interaction_card(result)
+    # Calling the card render with original parameter architecture
+    render_interaction_card(f"{drug1_name} + {drug2_name}", severity, cleaned)
 
 
 # ========================================================
