@@ -6,6 +6,7 @@ from utils.clinical_patterns import *
 from utils.clinical_rules import *
 from utils.clinical_knowledge import CLINICAL_EFFECTS
 from utils.clinical_classifier import classify_organ_system
+from utils.clinical_categories import classify_interaction_category
 
 def clean_interaction_text(text, drug1_name, drug2_name=None):
     """
@@ -110,6 +111,7 @@ def parse_clinical_details(raw_text, severity):
     """
     # Extract clinical effect and algorithmic confidence
     effect, confidence = extract_clinical_effect(raw_text)
+    interaction_category = classify_interaction_category(raw_text)
     
     # Classify the affected organ system using our new classifier
     organ_system = classify_organ_system(raw_text)
@@ -128,19 +130,28 @@ def parse_clinical_details(raw_text, severity):
     else:
         color_code = "#1565c0"
         
-    return effect, rec, mon, color_code, confidence, organ_system
+    return (
+        effect,
+        rec,
+        mon,
+        color_code,
+        confidence,
+        organ_system,
+        interaction_category
+    )
 
 def render_interaction_card(drug_pair, severity, mechanism_text):
     """
     Injects enterprise medical CSS styling templates into Streamlit to render highly scannable cards.
     """
     # Parse data including the new organ system parameter
-    effect, rec, mon, color, confidence, organ_system = parse_clinical_details(mechanism_text, severity)
+    effect, rec, mon, color, confidence, organ_system, interaction_category = parse_clinical_details(mechanism_text, severity)
     
     st.markdown(f"""
         <div class="med-card interaction-detail" style="border-left: 6px solid {color}; padding: 18px 24px;">
             <h3 style="color: {color}; margin-top: 0; margin-bottom: 15px; font-size: 1.25rem;">{severity}</h3>
             <p><strong>💊 Interaction:</strong> {drug_pair}</p>
+            <p><strong>🧬 Interaction Category:</strong> {interaction_category}</p>
             <p><strong>🩺 Clinical Effect:</strong> {effect}</p>
             <p><strong>🎯 Extraction Confidence:</strong> {confidence:.0%}</p>
             <p><strong>🫀 Organ System:</strong> {organ_system}</p>
