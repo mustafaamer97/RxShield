@@ -10,7 +10,7 @@ import string
 from itertools import combinations
 
 # ========================================================
-# 0. Page Config & Professional UI Injection
+# 0. Page Config & Enterprise Medical UI Styling
 # ========================================================
 st.set_page_config(
     page_title="RxShield | Clinical Decision Support System",
@@ -33,40 +33,53 @@ st.markdown("""
         background-color: var(--background-color);
         border-bottom: 2px solid #00796b;
         padding: 15px 0px;
-        margin-bottom: 30px;
+        margin-bottom: 25px;
         z-index: 99;
     }
     .header-title { font-size: 2.2rem; font-weight: 700; color: #00796b; margin: 0; letter-spacing: -0.5px; }
     .header-subtitle { font-size: 1rem; color: var(--text-color); opacity: 0.8; margin-top: 4px; }
+    
     .med-card {
         background-color: var(--secondary-background-color);
         border: 1px solid rgba(128, 128, 128, 0.15);
-        border-radius: 12px; padding: 24px; margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        border-radius: 12px; padding: 22px; margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s ease;
     }
+    .med-card:hover {
+        border-color: rgba(0, 121, 107, 0.3);
+    }
+    
     .clinical-badge {
-        display: inline-flex; align-items: center; padding: 6px 14px;
-        border-radius: 30px; font-size: 0.85rem; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px;
+        display: inline-flex; align-items: center; padding: 5px 12px;
+        border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.5px;
     }
     .badge-high { background-color: rgba(211, 47, 47, 0.12); color: #d32f2f; border: 1px solid rgba(211, 47, 47, 0.3); }
     .badge-moderate { background-color: rgba(245, 127, 23, 0.12); color: #f57f17; border: 1px solid rgba(245, 127, 23, 0.3); }
     .badge-monitor { background-color: rgba(21, 101, 192, 0.12); color: #1565c0; border: 1px solid rgba(21, 101, 192, 0.3); }
+    .badge-safe { background-color: rgba(46, 125, 50, 0.12); color: #2e7d32; border: 1px solid rgba(46, 125, 50, 0.3); }
+
     .sidebar-brand { font-size: 1.5rem; font-weight: 700; color: #00796b; margin-bottom: 5px; }
     .sidebar-status-tag {
         background-color: rgba(46, 125, 50, 0.12); color: #2e7d32; padding: 6px 12px;
         border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;
         margin-bottom: 20px; border: 1px solid rgba(46, 125, 50, 0.2);
     }
-    .app-footer { text-align: center; padding: 25px 0px; margin-top: 60px; font-size: 0.8rem; opacity: 0.6; border-top: 1px solid rgba(128, 128, 128, 0.15); }
+    .app-footer { text-align: center; padding: 30px 0px; margin-top: 50px; font-size: 0.82rem; opacity: 0.6; border-top: 1px solid rgba(128, 128, 128, 0.15); }
 </style>
 """, unsafe_allow_html=True)
 
+# ========================================================
+# Sidebar Presentation Layer
+# ========================================================
 with st.sidebar:
     st.markdown("<div class='sidebar-brand'>🛡️ RxShield CDSS</div>", unsafe_allow_html=True)
     st.markdown("<div class='sidebar-status-tag'>🟢 ENGINE ONLINE & SECURED</div>", unsafe_allow_html=True)
     st.markdown("### 📊 System Diagnostics\n**Core Pipeline Layer:** Tier-1 Clinical Verification\n**Deployment Context:** Production Cloud Instance")
     st.markdown("---\n### ⚙️ Database Ledger Specifications\nSQLite Engine operating via read-only connections. Data strictly cross-referenced against DrugBank / Medical schemas.")
+    st.markdown("---")
+    st.info("💡 **Clinical Tip:** Use the Regimen Matrix tab to assess multi-drug interactions for complex patient cases simultaneously.")
 
 st.markdown("""
 <div class='sticky-header'>
@@ -269,7 +282,7 @@ def render_medication_search_flow(label, index, key_prefix):
     return None, None
 
 # ========================================================
-# 4. Main User Interface
+# 4. Main User Interface (Refactored with Clinical Cards)
 # ========================================================
 if db_conn:
     tab1, tab2, tab3, tab4 = st.tabs([
@@ -286,53 +299,69 @@ if db_conn:
         st.markdown("</div>", unsafe_allow_html=True)
         
         if target_id:
-            # Rich Clinical Monograph Card from drug_info.json
-            meta_dict = med_index.get(target_id, {})
-            raw_info = meta_dict.get("raw_info", {})
-            
-            st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-            st.markdown(f"### 📋 Clinical Monograph: {current_drug_name}")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.markdown(f"**Generic Name:** {raw_info.get('generic_name', current_drug_name)}")
-                brands = raw_info.get('brand_names', [])
-                if isinstance(brands, list) and brands:
-                    st.markdown(f"**Brand Formulations:** {', '.join(brands[:5])}")
-            with col_b:
-                desc = raw_info.get('description', 'Verified standard active pharmaceutical ingredient profile.')
-                st.markdown(f"**Therapeutic Overview:** {desc[:250]}...")
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            query = "SELECT * FROM interactions WHERE \"Drug1 ID\" = ? OR \"Drug2 ID\" = ?"
-            df_res = pd.read_sql_query(query, db_conn, params=(target_id, target_id))
-            
-            if not df_res.empty:
-                processed_data = []
-                for _, row in df_res.iterrows():
-                    other_id = str(row['Drug2 ID']).upper() if str(row['Drug1 ID']).upper() == target_id else str(row['Drug1 ID']).upper()
-                    other_name = med_index[other_id]["display_name"] if other_id in med_index else "Registered Medication"
-                    
-                    clean_text = clean_interaction_text(row['Interaction'], other_name)
-                    processed_data.append({
-                        "Interacting Drug Formulation": other_name,
-                        "Clinical Severity Status": get_severity_color(clean_text),
-                        "Documented Mechanism / Medical Effect": clean_text
-                    })
+            with st.spinner("⏳ Extracting clinical monograph and checking interaction profiles..."):
+                meta_dict = med_index.get(target_id, {})
+                raw_info = meta_dict.get("raw_info", {})
                 
-                df_clean = pd.DataFrame(processed_data)
-                
+                # Monograph Card
                 st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-                severity_filter = st.radio("🎯 Filter Profile Ledger by Severity:", options=["All", "🔴 High Risk Only", "🟡 Moderate Caution Only", "🔵 Monitor / Info Only"], horizontal=True)
-                
-                if "🔴" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔴 High Risk"]
-                elif "🟡" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🟡 Moderate Caution"]
-                elif "🔵" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔵 Monitor / Information"]
-                
-                st.metric(label="Total Cross-Referenced Vectors", value=len(df_clean))
-                st.dataframe(df_clean, use_container_width=True, hide_index=True)
+                st.markdown(f"### 📋 Clinical Monograph: {current_drug_name}")
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.markdown(f"**Generic Name:** {raw_info.get('generic_name', current_drug_name)}")
+                    brands = raw_info.get('brand_names', [])
+                    if isinstance(brands, list) and brands:
+                        st.markdown(f"**Brand Formulations:** {', '.join(brands[:5])}")
+                with col_b:
+                    desc = raw_info.get('description', 'Verified standard active pharmaceutical ingredient profile.')
+                    st.markdown(f"**Therapeutic Overview:** {desc[:250]}...")
                 st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.info(f"ℹ️ No contraindications registered for {current_drug_name}.")
+                
+                query = "SELECT * FROM interactions WHERE \"Drug1 ID\" = ? OR \"Drug2 ID\" = ?"
+                df_res = pd.read_sql_query(query, db_conn, params=(target_id, target_id))
+                
+                if not df_res.empty:
+                    processed_data = []
+                    for _, row in df_res.iterrows():
+                        other_id = str(row['Drug2 ID']).upper() if str(row['Drug1 ID']).upper() == target_id else str(row['Drug1 ID']).upper()
+                        other_name = med_index[other_id]["display_name"] if other_id in med_index else "Registered Medication"
+                        
+                        clean_text = clean_interaction_text(row['Interaction'], other_name)
+                        processed_data.append({
+                            "Interacting Drug Formulation": other_name,
+                            "Clinical Severity Status": get_severity_color(clean_text),
+                            "Documented Mechanism / Medical Effect": clean_text
+                        })
+                    
+                    df_clean = pd.DataFrame(processed_data)
+                    
+                    st.markdown("<div class='med-card'>", unsafe_allow_html=True)
+                    severity_filter = st.radio("🎯 Filter Profile Ledger by Severity:", options=["All", "🔴 High Risk Only", "🟡 Moderate Caution Only", "🔵 Monitor / Info Only"], horizontal=True)
+                    
+                    if "🔴" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔴 High Risk"]
+                    elif "🟡" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🟡 Moderate Caution"]
+                    elif "🔵" in severity_filter: df_clean = df_clean[df_clean["Clinical Severity Status"] == "🔵 Monitor / Information"]
+                    
+                    st.metric(label="Total Cross-Referenced Vectors", value=len(df_clean))
+                    st.markdown("---")
+                    
+                    # Render Cards instead of Table
+                    for _, r in df_clean.iterrows():
+                        sev = r["Clinical Severity Status"]
+                        badge_class = "badge-high" if "High" in sev else ("badge-moderate" if "Moderate" in sev else "badge-monitor")
+                        st.markdown(f"""
+                            <div class="med-card" style="margin-bottom: 12px; padding: 18px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <strong style="font-size: 1.1rem; color: #00796b;">💊 {r['Interacting Drug Formulation']}</strong>
+                                    <span class="clinical-badge {badge_class}">{sev}</span>
+                                </div>
+                                <p style="margin: 0; font-size: 0.95rem; opacity: 0.9;">{r['Documented Mechanism / Medical Effect']}</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                    st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    st.info(f"ℹ️ No contraindications registered for {current_drug_name}.")
 
     # --- TAB 2: DRUG VS DRUG CHECKER ---
     with tab2:
@@ -343,23 +372,42 @@ if db_conn:
         st.markdown("</div>", unsafe_allow_html=True)
             
         if id_a and id_b:
-            if id_a == id_b: st.warning("⚠️ Identity Conflict: Please select two separate formulations.")
+            if id_a == id_b: 
+                st.warning("⚠️ Identity Conflict: Please select two separate formulations.")
             else:
-                query = "SELECT * FROM interactions WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)"
-                df_pair = pd.read_sql_query(query, db_conn, params=(id_a, id_b, id_b, id_a))
-                
-                st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-                if not df_pair.empty:
-                    cleaned_interaction = clean_interaction_text(df_pair.iloc[0]['Interaction'], name_b)
-                    severity_status = get_severity_color(cleaned_interaction)
-                    st.error("🚨 Contraindication Profile Alert Generated!")
-                    if "🔴" in severity_status: st.markdown("<span class='clinical-badge badge-high'>CRITICAL CRITERIA RISK</span>", unsafe_allow_html=True)
-                    elif "🟡" in severity_status: st.markdown("<span class='clinical-badge badge-moderate'>MODERATE MODERATION WARNING</span>", unsafe_allow_html=True)
-                    else: st.markdown("<span class='clinical-badge badge-monitor'>CLINICAL MONITOR / INFO</span>", unsafe_allow_html=True)
-                    st.markdown(f"**Documented Pathophysiology:** {cleaned_interaction}")
-                else:
-                    st.success(f"✅ Safe Therapeutic Pathway: No direct contraindications mapped between {name_a} and {name_b}.")
-                st.markdown("</div>", unsafe_allow_html=True)
+                with st.spinner("⏳ Analyzing binary clinical pathway..."):
+                    query = "SELECT * FROM interactions WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)"
+                    df_pair = pd.read_sql_query(query, db_conn, params=(id_a, id_b, id_b, id_a))
+                    
+                    st.markdown("<div class='med-card'>", unsafe_allow_html=True)
+                    if not df_pair.empty:
+                        cleaned_interaction = clean_interaction_text(df_pair.iloc[0]['Interaction'], name_b)
+                        severity_status = get_severity_color(cleaned_interaction)
+                        
+                        if "🔴" in severity_status: badge_c = "badge-high"
+                        elif "🟡" in severity_status: badge_c = "badge-moderate"
+                        else: badge_c = "badge-monitor"
+                        
+                        st.markdown(f"""
+                            <div style="padding: 10px 0;">
+                                <h3 style="color: #d32f2f; margin-bottom: 10px;">🚨 Contraindication Profile Alert Generated!</h3>
+                                <div style="margin-bottom: 15px;">
+                                    <span class="clinical-badge {badge_c}">{severity_status}</span>
+                                </div>
+                                <p style="font-size: 1.05rem; line-height: 1.5;"><strong>Documented Pathophysiology:</strong> {cleaned_interaction}</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                            <div style="padding: 10px 0;">
+                                <h3 style="color: #2e7d32; margin-bottom: 10px;">✅ Safe Therapeutic Pathway</h3>
+                                <div style="margin-bottom: 15px;">
+                                    <span class="clinical-badge badge-safe">NO CONTRADICTIONS</span>
+                                </div>
+                                <p style="font-size: 1.05rem;">No direct contraindications mapped between <strong>{name_a}</strong> and <strong>{name_b}</strong>.</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
     # --- TAB 3: MULTI-DRUG REGIMEN SAFETY MATRIX ---
     with tab3:
@@ -367,7 +415,6 @@ if db_conn:
         st.markdown("### 💊 Comprehensive Patient Medication Regimen Screening")
         st.markdown("Select multiple medications currently prescribed to the patient to evaluate all cross-interactions simultaneously.")
         
-        # Multiselect widget for regimen
         sorted_med_options = sorted([(m["display_name"], d_id) for d_id, m in med_index.items()], key=lambda x: x[0])
         selected_regimen = st.multiselect(
             "Select Patient Regimen Formulations:",
@@ -378,35 +425,54 @@ if db_conn:
         st.markdown("</div>", unsafe_allow_html=True)
         
         if selected_regimen and len(selected_regimen) >= 2:
-            st.markdown("<div class='med-card'>", unsafe_allow_html=True)
-            st.markdown("#### 📊 Regimen Cross-Pairwise Interaction Results")
-            
-            regimen_pairs = list(combinations(selected_regimen, 2))
-            regimen_results = []
-            
-            for (name_1, id_1), (name_2, id_2) in regimen_pairs:
-                q_reg = "SELECT * FROM interactions WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)"
-                df_r = pd.read_sql_query(q_reg, db_conn, params=(id_1, id_2, id_2, id_1))
+            with st.spinner("⏳ Running pairwise combinatorial matrix validation..."):
+                st.markdown("<div class='med-card'>", unsafe_allow_html=True)
+                st.markdown("#### 📊 Regimen Cross-Pairwise Interaction Results")
                 
-                if not df_r.empty:
-                    txt = clean_interaction_text(df_r.iloc[0]['Interaction'], name_2)
-                    sev = get_severity_color(txt)
-                    regimen_results.append({
-                        "Drug Pair": f"{name_1} + {name_2}",
-                        "Severity Status": sev,
-                        "Documented Clinical Mechanism": txt
-                    })
-                else:
-                    regimen_results.append({
-                        "Drug Pair": f"{name_1} + {name_2}",
-                        "Severity Status": "✅ Safe / No Interaction",
-                        "Documented Clinical Mechanism": "No documented contraindications between this pair."
-                    })
-            
-            df_regimen_summary = pd.DataFrame(regimen_results)
-            st.metric(label="Total Combinations Evaluated", value=len(regimen_pairs))
-            st.dataframe(df_regimen_summary, use_container_width=True, hide_index=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+                regimen_pairs = list(combinations(selected_regimen, 2))
+                regimen_results = []
+                
+                for (name_1, id_1), (name_2, id_2) in regimen_pairs:
+                    q_reg = "SELECT * FROM interactions WHERE (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?) OR (\"Drug1 ID\" = ? AND \"Drug2 ID\" = ?)"
+                    df_r = pd.read_sql_query(q_reg, db_conn, params=(id_1, id_2, id_2, id_1))
+                    
+                    if not df_r.empty:
+                        txt = clean_interaction_text(df_r.iloc[0]['Interaction'], name_2)
+                        sev = get_severity_color(txt)
+                        regimen_results.append({
+                            "Pair": f"{name_1} + {name_2}",
+                            "Severity": sev,
+                            "Mechanism": txt
+                        })
+                    else:
+                        regimen_results.append({
+                            "Pair": f"{name_1} + {name_2}",
+                            "Severity": "✅ Safe / No Interaction",
+                            "Mechanism": "No documented contraindications between this pair."
+                        })
+                
+                st.metric(label="Total Combinations Evaluated", value=len(regimen_pairs))
+                st.markdown("---")
+                
+                # Render Cards for Regimen Pairs
+                for item in regimen_results:
+                    sev = item["Severity"]
+                    if "High" in sev or "🔴" in sev: b_class = "badge-high"
+                    elif "Moderate" in sev or "🟡" in sev: b_class = "badge-moderate"
+                    elif "Safe" in sev or "✅" in sev: b_class = "badge-safe"
+                    else: b_class = "badge-monitor"
+                    
+                    st.markdown(f"""
+                        <div class="med-card" style="margin-bottom: 12px; padding: 18px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <strong style="font-size: 1.1rem; color: #00796b;">⚔️ {item['Pair']}</strong>
+                                <span class="clinical-badge {b_class}">{sev}</span>
+                            </div>
+                            <p style="margin: 0; font-size: 0.95rem; opacity: 0.9;">{item['Mechanism']}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
         elif selected_regimen and len(selected_regimen) == 1:
             st.info("ℹ️ Please select at least two medications to generate pairwise regimen interactions.")
 
@@ -421,12 +487,16 @@ if db_conn:
             st.markdown("<div class='med-card'>", unsafe_allow_html=True)
             if matching_lines:
                 st.warning(f"⚠️ Identified {len(matching_lines)} Dietary Precautions:")
-                for line in matching_lines[:15]: st.markdown(f"<div style='padding: 8px 0px; border-bottom: 1px solid rgba(128,128,128,0.1);'>💡 {line}</div>", unsafe_allow_html=True)
+                for line in matching_lines[:15]: 
+                    st.markdown(f"""
+                        <div style="padding: 10px 14px; margin-bottom: 8px; background-color: rgba(245, 127, 23, 0.05); border-left: 4px solid #f57f17; border-radius: 4px;">
+                            💡 {line}
+                        </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.success("✅ No dietary contraindications detected.")
             st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.error("⚙️ Connection Error.")
 
-st.markdown("<div class='app-footer'>RxShield CDSS Engine Tier-1 • Platform Build v2026.4.12 • Verified Clinical Ledger</div>", unsafe_allow_html=True)
-
+st.markdown("<div class='app-footer'>RxShield CDSS Engine Tier-1 • Enterprise Platform Build v2026.4.12 • Verified Clinical Ledger</div>", unsafe_allow_html=True)
