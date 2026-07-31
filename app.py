@@ -2,11 +2,51 @@ import streamlit as st
 import json
 import zipfile
 import pandas as pd
+import sqlite3
+from pathlib import Path
 from database.db import get_connection
 from database.loader import NAME_TO_ID, ID_TO_NAME
 from database.db import get_interaction
 
 st.set_page_config(page_title="RxShield")
+
+# --- Temporary SQLite Database (data_final_v5) Structural Check ---
+try:
+    st.subheader("🔍 Temporary SQLite (v5) Structural Check")
+    ZIP_V5 = Path("data_final_v5.zip")
+    DB_V5 = Path("data_final_v5.db")
+
+    if not DB_V5.exists():
+        with zipfile.ZipFile(ZIP_V5, "r") as z:
+            z.extractall(".")
+
+    conn_v5 = sqlite3.connect(DB_V5)
+    conn_v5.row_factory = sqlite3.Row
+
+    # Fetch all table names from the database schema
+    tables_v5 = conn_v5.execute(
+        "SELECT name FROM sqlite_master WHERE type='table';"
+    ).fetchall()
+
+    st.write("Tables Found:", [t["name"] for t in tables_v5])
+
+    if tables_v5:
+        target_table = tables_v5[0]["name"]
+        st.write(f"Previewing top 5 rows from table: `{target_table}`")
+        
+        # Fetch and display the first 5 records
+        rows_v5 = conn_v5.execute(f"SELECT * FROM `{target_table}` LIMIT 5;").fetchall()
+        for r in rows_v5:
+            st.write(dict(r))
+    else:
+        st.warning("No tables discovered in this database file.")
+
+    conn_v5.close()
+    st.markdown("---")
+except Exception as db_err:
+    st.error(f"Temporary DB v5 Load Error: {str(db_err)}")
+    st.markdown("---")
+
 
 # --- Temporary ZIP/CSV Structural Check Section ---
 try:
@@ -14,7 +54,6 @@ try:
     with zipfile.ZipFile("data_final_v5.zip", "r") as z:
         st.write("Files in ZIP:", z.namelist())
         
-        # Extract and read the first CSV file found inside the archive
         csv_name = z.namelist()[0]
         with z.open(csv_name) as f:
             df = pd.read_csv(f)
@@ -36,7 +75,6 @@ try:
         debug_data = json.load(f)
     
     st.subheader("🔍 Temporary JSON Structural Check")
-    # Fetch and display the first key-value pair to inspect structural architecture
     st.write(next(iter(debug_data.items())))
     st.markdown("---")
 except Exception as json_err:
@@ -47,10 +85,8 @@ except Exception as json_err:
 # --- Main Application: Drug–Drug Interaction Checker ---
 st.header("🛡️ Drug–Drug Interaction Checker")
 
-# Prepare alphabetically sorted drug names list
 drug_names = sorted(NAME_TO_ID.keys())
 
-# Split user interface into two columns for side-by-side selection
 col1, col2 = st.columns(2)
 
 with col1:
@@ -59,19 +95,16 @@ with col1:
 with col2:
     drug2 = st.selectbox("Drug 2", drug_names, index=None, placeholder="Select second drug")
 
-# Interaction verification triggering mechanism
 if st.button("Check Interaction", use_container_width=True):
     if drug1 and drug2:
         drug1_id = NAME_TO_ID[drug1]
         drug2_id = NAME_TO_ID[drug2]
         
-        # Execute cross-referencing search query using IDs
         result = get_interaction(drug1_id, drug2_id)
 
         if result:
             st.success("Interaction Found ✅")
             try:
-                # Output interaction details as a clean dictionary schema
                 st.write(dict(result))
             except (TypeError, ValueError):
                 st.write(list(result))
@@ -87,7 +120,6 @@ st.markdown("---")
 try:
     conn = get_connection()
     
-    # Extract the schema identifier for the active data table
     table = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table';"
     ).fetchone()
@@ -100,7 +132,6 @@ try:
 
         st.caption(f"⚡ Connected to system database table: `{table_name}`")
         
-        # Compute and parse total entry metric inside the targeted table
         count = conn.execute(
             f"SELECT COUNT(*) FROM `{table_name}`;"
         ).fetchone()[0]
