@@ -1,26 +1,32 @@
 import streamlit as st
 from database.db import get_connection
-# 1. استيراد قواميس الترجمة والأسماء من ملف الـ loader الخاص بك
+# استيراد قواميس الترجمة والأسماء من ملف الـ loader
 from database.loader import NAME_TO_ID, ID_TO_NAME
 
 st.set_page_config(page_title="RxShield")
 
 st.title("🛡️ RxShield")
 
-# --- الجزء الأول: اختبار البحث عن الأدوية (Drug Search Test) ---
-st.subheader("Drug Search Test")
+# --- الجزء المحدث: محرك البحث بالقائمة المنسدلة (Drug Search) ---
+st.subheader("Drug Search")
 
-drug_name = st.text_input("Drug Name", placeholder="مثال: Lepirudin")
+# جلب أسماء الأدوية وترتيبها أبجدياً بشكل تلقائي
+drug_names = sorted(NAME_TO_ID.keys())
 
-if drug_name:
-    # تحويل النص للحروف الصغيرة لضمان مطابقة الأسماء في القاموس بشكل صحيح
-    drug_id = NAME_TO_ID.get(drug_name.strip().lower())
+# إنشاء قائمة اختيار منسدلة تحتوي على كل الأدوية المتاحة
+selected_drug = st.selectbox(
+    "Select Drug",
+    drug_names,
+    index=None, # لجعل الحقل فارغاً في البداية حتى يختار المستخدم
+    placeholder="Choose a drug..."
+)
 
-    if drug_id:
-        st.success(f"DrugBank ID: {drug_id}")
-        st.write(f"Drug Name: {ID_TO_NAME[drug_id]}")
-    else:
-        st.error("Drug not found")
+if selected_drug:
+    # جلب المعرف مباشرة بدون الحاجة لـ .get() لأن الاسم مضمون وجوده في القائمة
+    drug_id = NAME_TO_ID[selected_drug]
+
+    st.success(f"DrugBank ID: {drug_id}")
+    st.write(f"Drug Name: {ID_TO_NAME[drug_id]}")
 
 st.markdown("---") # خط فاصل لتنظيم محتوى الصفحة
 
