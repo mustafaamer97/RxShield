@@ -68,6 +68,9 @@ try:
         st.caption(f"📊 Total Database Records: {count:,}")
         
     conn.close()
-
 except Exception as e:
-    st.error(f"Database System Status Error: {str(e)}")
+    st.error(f"Database System Status Error: {str(import json
+with open("drugs_synonyms.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+st.write(next(iter(data.items())))
