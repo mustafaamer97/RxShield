@@ -1,10 +1,34 @@
 import streamlit as st
 import json
+import zipfile
+import pandas as pd
 from database.db import get_connection
 from database.loader import NAME_TO_ID, ID_TO_NAME
 from database.db import get_interaction
 
 st.set_page_config(page_title="RxShield")
+
+# --- Temporary ZIP/CSV Structural Check Section ---
+try:
+    st.subheader("🔍 Temporary ZIP/CSV Structural Check")
+    with zipfile.ZipFile("data_final_v5.zip", "r") as z:
+        st.write("Files in ZIP:", z.namelist())
+        
+        # Extract and read the first CSV file found inside the archive
+        csv_name = z.namelist()[0]
+        with z.open(csv_name) as f:
+            df = pd.read_csv(f)
+            
+    st.write("DataFrame Head Preview:")
+    st.write(df.head())
+    
+    st.write("Columns List:")
+    st.write(df.columns.tolist())
+    st.markdown("---")
+except Exception as zip_err:
+    st.error(f"Temporary ZIP/CSV Load Error: {str(zip_err)}")
+    st.markdown("---")
+
 
 # --- Temporary JSON Debug Section ---
 try:
