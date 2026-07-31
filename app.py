@@ -1,18 +1,32 @@
 import streamlit as st
+import json
 from database.db import get_connection
-# 1. استيراد القواميس ودالة الفحص المطلوبة
 from database.loader import NAME_TO_ID, ID_TO_NAME
 from database.db import get_interaction
 
 st.set_page_config(page_title="RxShield")
 
-# --- الجزء المحدث: فاحص التداخلات الدوائية (Drug–Drug Interaction Checker) ---
+# --- Temporary JSON Debug Section ---
+try:
+    with open("drugs_synonyms.json", "r", encoding="utf-8") as f:
+        debug_data = json.load(f)
+    
+    st.subheader("🔍 Temporary JSON Structural Check")
+    # Fetch and display the first key-value pair to inspect structural architecture
+    st.write(next(iter(debug_data.items())))
+    st.markdown("---")
+except Exception as json_err:
+    st.error(f"Temporary JSON Load Error: {str(json_err)}")
+    st.markdown("---")
+
+
+# --- Main Application: Drug–Drug Interaction Checker ---
 st.header("🛡️ Drug–Drug Interaction Checker")
 
-# تجهيز قائمة الأدوية مرتبة أبجدياً
+# Prepare alphabetically sorted drug names list
 drug_names = sorted(NAME_TO_ID.keys())
 
-# تقسيم الواجهة إلى عمودين لاختيار الدوائين بجانب بعضهما
+# Split user interface into two columns for side-by-side selection
 col1, col2 = st.columns(2)
 
 with col1:
@@ -21,19 +35,19 @@ with col1:
 with col2:
     drug2 = st.selectbox("Drug 2", drug_names, index=None, placeholder="Select second drug")
 
-# تفعيل زر الفحص
+# Interaction verification triggering mechanism
 if st.button("Check Interaction", use_container_width=True):
     if drug1 and drug2:
         drug1_id = NAME_TO_ID[drug1]
         drug2_id = NAME_TO_ID[drug2]
         
-        # استدعاء دالة الفحص باستخدام المعرفات (IDs)
+        # Execute cross-referencing search query using IDs
         result = get_interaction(drug1_id, drug2_id)
 
         if result:
             st.success("Interaction Found ✅")
             try:
-                # عرض تفاصيل التداخل كقاموس منظم
+                # Output interaction details as a clean dictionary schema
                 st.write(dict(result))
             except (TypeError, ValueError):
                 st.write(list(result))
@@ -42,13 +56,14 @@ if st.button("Check Interaction", use_container_width=True):
     else:
         st.warning("⚠️ Please select both drugs to perform the check.")
 
-st.markdown("---") # خط فاصل لتنظيم محتوى الصفحة
+st.markdown("---")
 
-# --- الجزء الثاني: التحقق من حالة قاعدة البيانات والجدول بالأسفل ---
+
+# --- System Diagnostics: Database Integrity Verification ---
 try:
     conn = get_connection()
     
-    # جلب اسم أول جدول متوفر
+    # Extract the schema identifier for the active data table
     table = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table';"
     ).fetchone()
@@ -61,16 +76,13 @@ try:
 
         st.caption(f"⚡ Connected to system database table: `{table_name}`")
         
-        # حساب العدد الإجمالي للسجلات وعرضه كمعلومة إحصائية في الأسفل
+        # Compute and parse total entry metric inside the targeted table
         count = conn.execute(
             f"SELECT COUNT(*) FROM `{table_name}`;"
         ).fetchone()[0]
         st.caption(f"📊 Total Database Records: {count:,}")
         
     conn.close()
-except Exception as e:
-    st.error(f"Database System Status Error: {str(import json
-with open("drugs_synonyms.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
 
-st.write(next(iter(data.items())))
+except Exception as e:
+    st.error(f"Database System Status Error: {str(e)}")
