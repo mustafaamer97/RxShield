@@ -16,3 +16,4 @@ for drug_id, info in DRUGS.items():
     if name:
         NAME_TO_ID[name.lower()] = drug_id
         ID_TO_NAME[drug_id] = name
+print(next(iter(DRUGS.items())))
