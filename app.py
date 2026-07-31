@@ -1,19 +1,24 @@
 import streamlit as st
-import zipfile
-import os
+from database.db import get_connection
 
-st.title("🛡️ RxShield: Testing Zip Contents")
+st.set_page_config(page_title="RxShield")
 
-# التحقق من وجود الملف المضغوط
-zip_filename = "all_id_interaction.zip"
+st.title("🛡️ RxShield")
 
-if os.path.exists(zip_filename):
-    st.success(f"✅ تم العثور على الملف {zip_filename} في السيرفر!")
-    
-    # فحص محتويات الملف المضغوط وطباعتها
-    with zipfile.ZipFile(zip_filename, "r") as z:
-        file_list = z.namelist()
-        st.write("🔍 المحتويات المكتشفة داخل ملف الـ ZIP هي:")
-        st.code(file_list)
-else:
-    st.error(f"❌ لم يتم العثور على الملف {zip_filename}. تأكد من وجوده في نفس المجلد الرئيسي على GitHub.")
+try:
+
+    conn = get_connection()
+
+    tables = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table';"
+    ).fetchall()
+
+    st.success("Database Connected ✅")
+
+    st.write(tables)
+
+    conn.close()
+
+except Exception as e:
+
+    st.error(str(e))
