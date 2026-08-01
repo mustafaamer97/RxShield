@@ -68,3 +68,11 @@ def get_interaction(drug1_id, drug2_id):
     conn.close()
 
     return row
+
+
+def get_connection():
+    """
+    Compatibility function.
+    Returns the interaction database connection.
+    """
+    return get_interaction_connection()
