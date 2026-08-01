@@ -1,6 +1,4 @@
 import streamlit as st
-import json
-import zipfile
 import pandas as pd
 import sqlite3
 from pathlib import Path
@@ -13,77 +11,6 @@ from database.drug_service import (
 from database.db import get_interaction
 
 st.set_page_config(page_title="RxShield")
-
-# --- Temporary SQLite Database (data_final_v5) Structural Check ---
-try:
-    st.subheader("🔍 Temporary SQLite (v5) Structural Check")
-    ZIP_V5 = Path("data_final_v5.zip")
-    DB_V5 = Path("data_final_v5.db")
-
-    if not DB_V5.exists():
-        with zipfile.ZipFile(ZIP_V5, "r") as z:
-            z.extractall(".")
-
-    conn_v5 = sqlite3.connect(DB_V5)
-    conn_v5.row_factory = sqlite3.Row
-
-    # Fetch all table names from the database schema
-    tables_v5 = conn_v5.execute(
-        "SELECT name FROM sqlite_master WHERE type='table';"
-    ).fetchall()
-
-    st.write("Tables Found:", [t["name"] for t in tables_v5])
-
-    if tables_v5:
-        target_table = tables_v5[0]["name"]
-        st.write(f"Previewing top 5 rows from table: `{target_table}`")
-        
-        # Fetch and display the first 5 records
-        rows_v5 = conn_v5.execute(f"SELECT * FROM `{target_table}` LIMIT 5;").fetchall()
-        for r in rows_v5:
-            st.write(dict(r))
-    else:
-        st.warning("No tables discovered in this database file.")
-
-    conn_v5.close()
-    st.markdown("---")
-except Exception as db_err:
-    st.error(f"Temporary DB v5 Load Error: {str(db_err)}")
-    st.markdown("---")
-
-
-# --- Temporary ZIP/CSV Structural Check Section ---
-try:
-    st.subheader("🔍 Temporary ZIP/CSV Structural Check")
-    with zipfile.ZipFile("data_final_v5.zip", "r") as z:
-        st.write("Files in ZIP:", z.namelist())
-        
-        csv_name = z.namelist()[0]
-        with z.open(csv_name) as f:
-            df = pd.read_csv(f)
-            
-    st.write("DataFrame Head Preview:")
-    st.write(df.head())
-    
-    st.write("Columns List:")
-    st.write(df.columns.tolist())
-    st.markdown("---")
-except Exception as zip_err:
-    st.error(f"Temporary ZIP/CSV Load Error: {str(zip_err)}")
-    st.markdown("---")
-
-
-# --- Temporary JSON Debug Section ---
-try:
-    with open("drugs_synonyms.json", "r", encoding="utf-8") as f:
-        debug_data = json.load(f)
-    
-    st.subheader("🔍 Temporary JSON Structural Check")
-    st.write(next(iter(debug_data.items())))
-    st.markdown("---")
-except Exception as json_err:
-    st.error(f"Temporary JSON Load Error: {str(json_err)}")
-    st.markdown("---")
 
 
 # --- Main Application: Drug–Drug Interaction Checker ---
