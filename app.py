@@ -141,3 +141,22 @@ try:
 
 except Exception as e:
     st.error(f"Database System Status Error: {str(e)}")
+
+st.markdown("---")
+
+
+# --- Temporary CSV Debug Section: drug_data.csv Inspection ---
+try:
+    st.subheader("🔍 drug_data.csv Inspection")
+
+    df_drugs = pd.read_csv("drug_data.csv")
+
+    st.write("Columns:")
+    st.write(df_drugs.columns.tolist())
+
+    st.write("Shape:")
+    st.write(df_drugs.shape)
+
+    st.dataframe(df_drugs.head(10))
+except Exception as csv_err:
+    st.error(f"drug_data.csv Load Error: {str(csv_err)}")
