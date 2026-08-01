@@ -5,7 +5,11 @@ import pandas as pd
 import sqlite3
 from pathlib import Path
 from database.db import get_connection
-from database.loader import NAME_TO_ID, ID_TO_NAME
+from database.drug_service import (
+    DRUG_NAMES,
+    NAME_TO_ID,
+    ID_TO_NAME,
+)
 from database.db import get_interaction
 
 st.set_page_config(page_title="RxShield")
@@ -85,7 +89,7 @@ except Exception as json_err:
 # --- Main Application: Drug–Drug Interaction Checker ---
 st.header("🛡️ Drug–Drug Interaction Checker")
 
-drug_names = sorted(NAME_TO_ID.keys())
+drug_names = DRUG_NAMES
 
 col1, col2 = st.columns(2)
 
@@ -141,22 +145,3 @@ try:
 
 except Exception as e:
     st.error(f"Database System Status Error: {str(e)}")
-
-st.markdown("---")
-
-
-# --- Temporary CSV Debug Section: drug_data.csv Inspection ---
-try:
-    st.subheader("🔍 drug_data.csv Inspection")
-
-    df_drugs = pd.read_csv("drug_data.csv")
-
-    st.write("Columns:")
-    st.write(df_drugs.columns.tolist())
-
-    st.write("Shape:")
-    st.write(df_drugs.shape)
-
-    st.dataframe(df_drugs.head(10))
-except Exception as csv_err:
-    st.error(f"drug_data.csv Load Error: {str(csv_err)}")
