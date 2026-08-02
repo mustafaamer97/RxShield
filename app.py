@@ -13,7 +13,7 @@ st.title("🛡️ RxShield")
 st.subheader("Drug–Drug Interaction Checker")
 
 # 1. تحميل ملف الأدوية المفلتر الجديد
-drug_lookup = pd.read_csv("drug_lookup_filtered.csv")
+drug_lookup = pd.read_csv("drug_lookup.csv")
 
 # 2. بناء القواميس ديناميكياً من الملف
 NAME_TO_ID = dict(zip(drug_lookup["drug_name"], drug_lookup["drug_id"]))
