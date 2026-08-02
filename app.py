@@ -1,6 +1,5 @@
 import streamlit as st
-
-from database.loader import NAME_TO_ID, ID_TO_NAME
+import pandas as pd
 from database.db import get_interaction
 from utils.clinical_engine import build_report
 
@@ -13,7 +12,14 @@ st.set_page_config(
 st.title("🛡️ RxShield")
 st.subheader("Drug–Drug Interaction Checker")
 
-drug_names = sorted(NAME_TO_ID.keys())
+# 1. تحميل ملف الأدوية المفلتر الجديد
+drug_lookup = pd.read_csv("drug_lookup_filtered.csv")
+
+# 2. بناء القواميس ديناميكياً من الملف
+NAME_TO_ID = dict(zip(drug_lookup["drug_name"], drug_lookup["drug_id"]))
+
+# 3. بناء قائمة الأسماء المرتبة أبجدياً لواجهة المستخدم
+drug_names = sorted(drug_lookup["drug_name"].tolist())
 
 col1, col2 = st.columns(2)
 
@@ -47,9 +53,11 @@ if st.button("Check Interaction", use_container_width=True):
     if row is None:
         st.success("✅ No interaction found.")
     else:
-
+        # ملاحظة: تأكد أن مفتاح العلاقة في قاعدة بياناتك يطابق الاسم المستدعى هنا (مثال: 'interaction_type' أو 'Interaction')
+        interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
+        
         report = build_report(
-            row["Interaction"],
+            interaction_text,
             drug1,
             drug2
         )
