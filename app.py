@@ -15,6 +15,9 @@ st.subheader("Drug–Drug Interaction Checker")
 # 1. تحميل ملف الأدوية المفلتر الجديد
 drug_lookup = pd.read_csv("drug_lookup.csv")
 
+# قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
+st.write(drug_lookup.head(10))
+
 # 2. بناء القواميس ديناميكياً من الملف
 NAME_TO_ID = dict(zip(drug_lookup["drug_name"], drug_lookup["drug_id"]))
 
