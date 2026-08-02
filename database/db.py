@@ -1,78 +1,70 @@
-from pathlib import Path
 import sqlite3
 import zipfile
+from pathlib import Path
+import streamlit as st
+
+DB_FILE = Path("all_id_interaction.db")
+ZIP_FILE = Path("all_id_interaction.zip")
 
 
-def get_database(zip_file, db_file):
+@st.cache_resource
+def get_connection():
     """
-    Establishes a secure connection to a dynamic SQLite database.
-    Automatically extracts the specified ZIP file if the database does not exist.
+    Returns a cached SQLite connection.
+    Automatically extracts the database if only the ZIP exists.
     """
-    db_path = Path(db_file)
 
-    if not db_path.exists():
-        with zipfile.ZipFile(zip_file, "r") as z:
-            z.extractall(".")
+    if not DB_FILE.exists():
 
-    conn = sqlite3.connect(db_path)
-    # Enable row_factory to access columns by name instead of numerical indexes
+        if ZIP_FILE.exists():
+            with zipfile.ZipFile(ZIP_FILE, "r") as z:
+                z.extractall(".")
+
+        else:
+            raise FileNotFoundError(
+                "all_id_interaction.db or all_id_interaction.zip not found."
+            )
+
+    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
     conn.row_factory = sqlite3.Row
 
     return conn
 
 
-def get_interaction_connection():
-    """Returns a connection setup for the interaction database."""
-    return get_database(
-        "all_id_interaction.zip",
-        "all_id_interaction.db"
-    )
-
-
-def get_drug_connection():
-    """Returns a connection setup for the modern v5 drug info database."""
-    return get_database(
-        "data_final_v5.zip",
-        "data_final_v5.db"
-    )
-
-
 def get_interaction(drug1_id, drug2_id):
     """
-    Performs a bidirectional search for drug-drug interactions using IDs.
-    Checks both combinations (Drug1 to Drug2) and (Drug2 to Drug1) using the interaction connection.
+    Search interaction in both directions.
     """
-    # Use the refactored dynamic connection function
-    conn = get_interaction_connection()
 
-    # Parameterized SQL query to safely fetch the first matching interaction row
+    conn = get_connection()
+
     row = conn.execute(
         """
         SELECT *
         FROM interactions
-        WHERE 
-            ("Drug1 ID" = ? AND "Drug2 ID" = ?)
-            OR 
-            ("Drug1 ID" = ? AND "Drug2 ID" = ?)
-        LIMIT 1;
+        WHERE
+        (
+            "Drug1 ID" = ?
+            AND
+            "Drug2 ID" = ?
+        )
+
+        OR
+
+        (
+            "Drug1 ID" = ?
+            AND
+            "Drug2 ID" = ?
+        )
+
+        LIMIT 1
         """,
         (
             drug1_id,
             drug2_id,
             drug2_id,
-            drug1_id
-        )
+            drug1_id,
+        ),
     ).fetchone()
 
-    # Close the connection immediately to free system resources
-    conn.close()
-
     return row
-
-
-def get_connection():
-    """
-    Compatibility function.
-    Returns the interaction database connection.
-    """
-    return get_interaction_connection()
