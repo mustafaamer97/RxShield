@@ -82,7 +82,7 @@ tab1, tab2 = st.tabs(
 )
 
 # --------------------------------------------------------------------
-# التبويب الأول: تفاعلات الأدوية مع بعضها البعض (محدث بالكروت والتفاصيل)
+# التبويب الأول: تفاعلات الأدوية مع بعضها البعض
 # --------------------------------------------------------------------
 with tab1:
     st.subheader("Drug–Drug Interaction Checker")
@@ -131,13 +131,11 @@ with tab1:
             # بناء التقرير
             report = build_report(interaction_text, drug1, drug2)
             
-            # --------------------------------------------------------------------
-            # التحديث الجديد: استبدال آلية العرض القديمة بنظام الكروت المطور
-            # --------------------------------------------------------------------
+            # تمرير النص داخل قائمة [ ] ليتوافق مع حقل items في الدالة المتوفرة لديك
             clinical_card(
-                title="Drug–Drug Interaction",
-                message=report["interaction"],
+                title="Drug–Drug Interaction Report",
                 category=report["severity"],
+                items=[report["interaction"]],
                 recommendation=report["recommendation"],
                 reference="DrugBank Knowledge Base",
             )
@@ -152,7 +150,7 @@ with tab1:
 
 
 # --------------------------------------------------------------------
-# التبويب الثاني: تفاعلات الأدوية مع الأطعمة
+# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (تم تحديث الاستدعاء المباشر)
 # --------------------------------------------------------------------
 with tab2:
     st.subheader("Drug–Food Interaction Checker")
@@ -176,33 +174,19 @@ with tab2:
         result = dfi_engine.find_interactions(selected_food_drug)
 
         if result:
-            st.subheader("🥗 Drug–Food Interactions")
-
             # جلب مصفوفة التفاعلات بأمان
-            interactions = result.get("food_interactions", [])
+            raw_interactions = result.get("food_interactions", [])
+            
+            # التأكد من تحويل النص إلى قائمة إذا كان نصاً مفرداً لتجنب الأخطاء البرمجية
+            food_items = raw_interactions if isinstance(raw_interactions, list) else [raw_interactions]
 
-            if isinstance(interactions, list) and interactions:
-                for interaction in interactions:
-                    clinical_card(
-                        title="Drug–Food Interaction",
-                        message=interaction,
-                        category="Food Safety",
-                        recommendation="Follow the dietary advice above and consult a healthcare professional if needed.",
-                        reference=result.get(
-                            "reference", "No reference available."
-                        ),
-                    )
-            elif isinstance(interactions, str) and interactions:
-                clinical_card(
-                    title="Drug–Food Interaction",
-                    message=interactions,
-                    category="Food Safety",
-                    recommendation="Follow the dietary advice above and consult a healthcare professional if needed.",
-                    reference=result.get(
-                        "reference", "No reference available."
-                    ),
-                )
-            else:
-                st.info("No explicit food interaction text details found.")
+            # ✨ الاستدعاء النظيف والمباشر الذي طلبته تماماً
+            clinical_card(
+                title="Drug–Food Interaction Report",
+                category="Food Safety",
+                items=food_items,
+                recommendation="Maintain a consistent diet and consult your healthcare provider before making major dietary changes.",
+                reference=result.get("reference"),
+            )
         else:
             st.success("✅ No specific food interactions found.")
