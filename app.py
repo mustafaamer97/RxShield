@@ -1,8 +1,37 @@
-import streamlit as st
+import json
 import pandas as pd
-from database.db import get_interaction, get_connection
+import streamlit as st
+from database.db import get_connection, get_interaction
 # استيراد الدالتين معاً من المحرك الإكلينيكي
 from utils.clinical_engine import build_report, render_report
+
+# 💡 هنا نفترض أنك قمت بتعريف dfi_engine أو استيراده، 
+# وسنقوم بمحاكاته هنا للتأكد من عمل الكود بشكل سليم.
+# يمكنك استبدال هذا الجزء بطريقة استيراد المحرك الفعلية لديك.
+class DrugFoodInteractionEngine:
+    def __init__(self):
+        try:
+            with open("Drug to Food interactions Dataset.json", "r", encoding="utf-8") as f:
+                self.food_db = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.food_db = []
+
+    def find_interactions(self, drug_name: str):
+        if not drug_name:
+            return None
+
+        drug = drug_name.strip().lower()
+
+        # الدالة المعدلة تعيد قاموساً واحداً فوراً عند إيجاد التطابق
+        for item in self.food_db:
+            if item.get("drug", "").lower() == drug:
+                return item
+
+        return None
+
+# تهيئة المحرك
+dfi_engine = DrugFoodInteractionEngine()
+
 
 st.set_page_config(
     page_title="RxShield",
@@ -11,7 +40,6 @@ st.set_page_config(
 )
 
 st.title("🛡️ RxShield")
-st.subheader("Drug–Drug Interaction Checker")
 
 # 1. تحميل ملف الأدوية المفلتر الجديد
 drug_lookup = pd.read_csv("drug_lookup.csv")
@@ -88,51 +116,100 @@ st.markdown("---")
 
 st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
 
-col1, col2 = st.columns(2)
 
-# ----------------- صناديق الاختيار -----------------
-with col1:
-    drug1 = st.selectbox(
-        "Drug 1",
-        drug_names,
-        index=None,
-        placeholder="Type drug name..."
-    )
+# ====================================================================
+# ✨ إنشاء التبويبات لفصل الميزتين بشكل احترافي
+# ====================================================================
+tab1, tab2 = st.tabs(["💊 Drug–Drug Interaction", "🍎 Drug–Food Interaction"])
 
-with col2:
-    drug2 = st.selectbox(
-        "Drug 2",
-        drug_names,
-        index=None,
-        placeholder="Type drug name..."
-    )
-# ------------------------------------------------------------
+# --------------------------------------------------------------------
+# التبويب الأول: تفاعلات الأدوية مع بعضها البعض
+# --------------------------------------------------------------------
+with tab1:
+    st.subheader("Drug–Drug Interaction Checker")
 
-if st.button("Check Interaction", use_container_width=True):
+    col1, col2 = st.columns(2)
 
-    if not drug1 or not drug2:
-        st.warning("Please select both drugs.")
-        st.stop()
-
-    drug1_id = NAME_TO_ID[drug1]
-    drug2_id = NAME_TO_ID[drug2]
-
-    row = get_interaction(drug1_id, drug2_id)
-
-    if row is None:
-        st.success("✅ No interaction found.")
-    else:
-        # التأكد من مطابقة مفتاح التفاعل في قاعدة البيانات
-        interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
-        
-        # بناء التقرير
-        report = build_report(
-            interaction_text,
-            drug1,
-            drug2
+    # ----------------- صناديق الاختيار لـ Drug-Drug -----------------
+    with col1:
+        drug1 = st.selectbox(
+            "Drug 1",
+            drug_names,
+            index=None,
+            placeholder="Type drug name...",
+            key="dd_drug1"  # تم إضافة مفتاح فريد لتجنب تعارض العناصر
         )
 
-        # ----------------- عرض التقرير المطور -----------------
-        # تم استبدال جميع أسطر العرض القديمة والحذف بالكامل بهذا الاستدعاء النظيف:
-        render_report(report)
-        # -------------------------------------------------------------------
+    with col2:
+        drug2 = st.selectbox(
+            "Drug 2",
+            drug_names,
+            index=None,
+            placeholder="Type drug name...",
+            key="dd_drug2"  # تم إضافة مفتاح فريد لتجنب تعارض العناصر
+        )
+    # ------------------------------------------------------------
+
+    if st.button("Check Interaction", use_container_width=True, key="btn_dd_check"):
+
+        if not drug1 or not drug2:
+            st.warning("Please select both drugs.")
+            st.stop()
+
+        drug1_id = NAME_TO_ID[drug1]
+        drug2_id = NAME_TO_ID[drug2]
+
+        row = get_interaction(drug1_id, drug2_id)
+
+        if row is None:
+            st.success("✅ No interaction found.")
+        else:
+            # التأكد من مطابقة مفتاح التفاعل في قاعدة البيانات
+            interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
+            
+            # بناء التقرير
+            report = build_report(
+                interaction_text,
+                drug1,
+                drug2
+            )
+
+            # عرض التقرير المطور
+            render_report(report)
+
+
+# --------------------------------------------------------------------
+# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (الميزة الجديدة المضافة)
+# --------------------------------------------------------------------
+with tab2:
+    st.subheader("Drug–Food Interaction Checker")
+    
+    # اختيار دواء واحد لفحص تفاعلاته الغذائية
+    selected_food_drug = st.selectbox(
+        "Select Drug",
+        drug_names,
+        index=None,
+        placeholder="Type drug name...",
+        key="df_drug"
+    )
+    
+    if st.button("Check Food Interaction", use_container_width=True, key="btn_df_check"):
+        if not selected_food_drug:
+            st.warning("Please select a drug.")
+            st.stop()
+            
+        # استخدام الكود البسيط والمنظم بعد تعديل دالة المحرك لتستقبل اسم الدواء مباشرة
+        result = dfi_engine.find_interactions(selected_food_drug)
+
+        if result:
+            st.subheader("🥦 Drug–Food Interactions")
+
+            # عرض قائمة التفاعلات الغذائية بوضوح
+            for interaction in result.get("food_interactions", []):
+                st.warning(interaction)
+
+            # عرض المصدر المرجعي الطبي
+            if result.get("reference"):
+                st.caption(f"**Reference:** {result['reference']}")
+        else:
+            st.success("✅ No specific food interactions found for this drug.")
