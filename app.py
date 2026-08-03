@@ -89,7 +89,7 @@ st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
 
 col1, col2 = st.columns(2)
 
-# ----------------- تعديل صناديق الاختيار هنا -----------------
+# ----------------- صناديق الاختيار -----------------
 with col1:
     drug1 = st.selectbox(
         "Drug 1",
@@ -121,6 +121,7 @@ if st.button("Check Interaction", use_container_width=True):
     if row is None:
         st.success("✅ No interaction found.")
     else:
+        # ملاحظة: تأكد أن مفتاح العلاقة في قاعدة بياناتك يطابق الاسم المستدعى هنا (مثال: 'interaction_type' أو 'Interaction')
         interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
         
         report = build_report(
@@ -129,8 +130,16 @@ if st.button("Check Interaction", use_container_width=True):
             drug2
         )
 
-        st.error(f"Severity: {report['severity']}")
+        # ----------------- التعديل الجديد لعرض التقرير الطبي -----------------
+        st.markdown("## 🛡️ RxShield Clinical Report")
 
-        st.markdown("### Clinical Interaction")
+        st.error(report["severity"])
 
-        st.write(report["interaction"])
+        st.markdown("### 🧬 Clinical Effect")
+
+        st.info(report["interaction"])
+
+        st.markdown("### 📋 Recommendation")
+
+        st.success(report["recommendation"])
+        # -------------------------------------------------------------------
