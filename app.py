@@ -130,7 +130,7 @@ if st.button("Check Interaction", use_container_width=True):
             drug2
         )
 
-        # ----------------- التعديل الجديد لعرض التقرير الطبي -----------------
+        # ----------------- التقرير الطبي الكامل -----------------
         st.markdown("## 🛡️ RxShield Clinical Report")
 
         st.error(report["severity"])
@@ -142,4 +142,10 @@ if st.button("Check Interaction", use_container_width=True):
         st.markdown("### 📋 Recommendation")
 
         st.success(report["recommendation"])
+
+        st.markdown("### ⚙️ Mechanism")
+        st.info(report["mechanism"])
+
+        st.markdown("### 🩺 Monitoring")
+        st.warning(report["monitoring"])
         # -------------------------------------------------------------------
