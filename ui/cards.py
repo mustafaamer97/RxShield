@@ -2,39 +2,38 @@ import streamlit as st
 
 
 def clinical_card(
-    title: str,
-    message: str,
-    category: str = "Information",
-    recommendation: str | None = None,
-    reference: str | None = None,
+    title,
+    message,
+    category="Clinical Information",
+    recommendation=None,
+    reference=None,
 ):
-    """
-    Universal RxShield Clinical Card
-    Used for DDI and DFI.
-    """
 
     st.markdown(
         f"""
 <div style="
-border-left:6px solid #ff4b4b;
+background-color:#F8F9FA;
 padding:18px;
-margin-bottom:15px;
-border-radius:10px;
-background:#1b1b1b;
+margin-top:12px;
+margin-bottom:18px;
+border-radius:12px;
+border-left:6px solid #D32F2F;
+box-shadow:0px 2px 8px rgba(0,0,0,0.08);
 ">
 
-<h4 style="margin-bottom:8px;">
+<h4 style="margin-bottom:10px;">
 🛡️ {title}
 </h4>
 
-<b>Category</b><br>
+<p style="margin-bottom:6px;">
+<b>📂 Category</b><br>
 {category}
+</p>
 
-<br><br>
-
-<b>Clinical Advice</b><br>
+<p style="margin-bottom:6px;">
+<b>⚠️ Clinical Advice</b><br>
 {message}
-
+</p>
 """,
         unsafe_allow_html=True,
     )
@@ -42,19 +41,21 @@ background:#1b1b1b;
     if recommendation:
         st.markdown(
             f"""
-<b>Recommendation</b><br>
+<p style="margin-bottom:6px;">
+<b>✅ Recommendation</b><br>
 {recommendation}
+</p>
 """,
             unsafe_allow_html=True,
         )
 
     if reference:
         st.markdown(
-            f"""
-<br>
-
-<small><b>Reference:</b><br>
-{reference}</small>
+            """
+<p style="margin-bottom:0px;">
+<b>📚 Source</b><br>
+DrugBank 6.0 (Knox et al., 2024)
+</p>
 """,
             unsafe_allow_html=True,
         )
