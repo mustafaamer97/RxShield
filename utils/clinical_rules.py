@@ -1,4 +1,5 @@
 import re
+import streamlit as st
 from utils.clinical_rules import RULES
 
 
@@ -77,3 +78,46 @@ def build_report(interaction_text, drug1, drug2):
         "recommendation": rule["recommendation"],
         "monitoring": rule["monitoring"],
     }
+
+
+def render_report(report):
+    """
+    يقوم برسم وعرض عناصر التقرير الطبي السريري بالكامل على واجهة تطبيق Streamlit 
+    بناءً على مستوى الخطورة والملاحظات الطبية المرفقة.
+    """
+    st.markdown("# 🛡️ RxShield Clinical Report")
+
+    st.error(report["severity"])
+
+    st.markdown("## 🧬 Clinical Effect")
+    st.info(report["interaction"])
+
+    st.markdown("## 📋 Recommendation")
+    st.success(report["recommendation"])
+
+    st.markdown("## ⚙️ Mechanism")
+    st.info(report["mechanism"])
+
+    st.markdown("## 🩺 Monitoring")
+    st.warning(report["monitoring"])
+
+    st.markdown("## 📚 Evidence")
+    st.caption("DrugBank Knowledge Base")
+
+    st.markdown("## ⚠️ Clinical Notes")
+
+    if "Critical" in report["severity"]:
+        st.error(
+            "This interaction may result in serious patient harm. "
+            "Evaluate risk versus benefit before co-administration."
+        )
+
+    elif "Moderate" in report["severity"]:
+        st.warning(
+            "The combination can usually be used with appropriate monitoring."
+        )
+
+    else:
+        st.success(
+            "No major precautions beyond routine monitoring."
+        )
