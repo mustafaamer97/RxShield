@@ -155,10 +155,46 @@ def classify_severity(text):
     return "🟢 Minor"
 
 
+def enhance_recommendation(report):
+    """
+    تقوم بتعديل التوصيات ديناميكياً لتوفير إرشادات سريرية دقيقة وقابلة للتطبيق 
+    بناءً على الكلمات المفتاحية الحرجة الموجودة في نص التداخل.
+    """
+    text = report["interaction"].lower()
+
+    # Bleeding
+    if "bleeding" in text or "hemorrhage" in text:
+        report["recommendation"] = (
+            "Avoid combination whenever possible. "
+            "If unavoidable, monitor INR closely and educate the patient about bleeding symptoms."
+        )
+
+    # QT
+    elif "qtc prolongation" in text:
+        report["recommendation"] = (
+            "Avoid combining multiple QT-prolonging drugs. "
+            "Correct electrolyte abnormalities and obtain baseline ECG."
+        )
+
+    # CYP3A4
+    elif "cyp3a4" in text:
+        report["recommendation"] = (
+            "Dose adjustment may be required because of CYP3A4 interaction."
+        )
+
+    # Serum concentration
+    elif "serum concentration" in text:
+        report["recommendation"] = (
+            "Consider therapeutic drug monitoring and dose adjustment."
+        )
+
+    return report
+
+
 def build_report(interaction_text, drug1, drug2):
     """
     بناء التقرير السريري الكامل للتفاعل بين الدوائين بشكل ديناميكي مبسط
-    مع ربط السمات السريرية والتفسير الدوائي المطور لـ RxShield.
+    مع ربط السمات السريرية وتعزيز التوصيات الطبية مباشرة.
     """
     # 1. صياغة النص وإدراج أسماء الأدوية الحالية مكان علامات الاستبدال (.*)
     text = interaction_text.replace("(.*)", "{}")
@@ -170,8 +206,8 @@ def build_report(interaction_text, drug1, drug2):
     # 3. استخراج المظهر والنوع والإنزيمات سريرياً
     features = extract_clinical_features(text)
 
-    # 4. إرجاع القاموس النهائي المهيكل لـ RxShield مباشرة
-    return {
+    # 4. صياغة القاموس الأولي للتقرير
+    report = {
         "severity": rule["severity"],
         "interaction": text,
         "clinical_effect": features["effect"],
@@ -181,6 +217,11 @@ def build_report(interaction_text, drug1, drug2):
         "recommendation": rule["recommendation"],
         "monitoring": rule["monitoring"],
     }
+
+    # 5. تعزيز وتخصيص التوصية الطبية قبل الإرجاع
+    report = enhance_recommendation(report)
+
+    return report
 
 
 def render_report(report):
