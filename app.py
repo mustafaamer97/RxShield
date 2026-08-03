@@ -5,9 +5,6 @@ from database.db import get_connection, get_interaction
 # استيراد الدالتين معاً من المحرك الإكلينيكي
 from utils.clinical_engine import build_report, render_report
 
-# 💡 هنا نفترض أنك قمت بتعريف dfi_engine أو استيراده، 
-# وسنقوم بمحاكاته هنا للتأكد من عمل الكود بشكل سليم.
-# يمكنك استبدال هذا الجزء بطريقة استيراد المحرك الفعلية لديك.
 class DrugFoodInteractionEngine:
     def __init__(self):
         try:
@@ -20,11 +17,15 @@ class DrugFoodInteractionEngine:
         if not drug_name:
             return None
 
-        drug = drug_name.strip().lower()
+        # تحويل النص لحروف صغيرة موحدة وإزالة الفراغات الزائدة
+        query = drug_name.strip().casefold()
 
-        # الدالة المعدلة تعيد قاموساً واحداً فوراً عند إيجاد التطابق
         for item in self.food_db:
-            if item.get("drug", "").lower() == drug:
+            # محاولة جلب اسم الدواء من المفاتيح المتوقعة (drug أو name)
+            name = item.get("drug", item.get("name", "")).strip().casefold()
+            
+            # مطابقة مرنة فائقة (تطابق كامل، أو احتواء نصي متبادل)
+            if query == name or query in name or name in query:
                 return item
 
         return None
@@ -130,14 +131,13 @@ with tab1:
 
     col1, col2 = st.columns(2)
 
-    # ----------------- صناديق الاختيار لـ Drug-Drug -----------------
     with col1:
         drug1 = st.selectbox(
             "Drug 1",
             drug_names,
             index=None,
             placeholder="Type drug name...",
-            key="dd_drug1"  # تم إضافة مفتاح فريد لتجنب تعارض العناصر
+            key="dd_drug1"
         )
 
     with col2:
@@ -146,9 +146,8 @@ with tab1:
             drug_names,
             index=None,
             placeholder="Type drug name...",
-            key="dd_drug2"  # تم إضافة مفتاح فريد لتجنب تعارض العناصر
+            key="dd_drug2"
         )
-    # ------------------------------------------------------------
 
     if st.button("Check Interaction", use_container_width=True, key="btn_dd_check"):
 
@@ -164,26 +163,31 @@ with tab1:
         if row is None:
             st.success("✅ No interaction found.")
         else:
-            # التأكد من مطابقة مفتاح التفاعل في قاعدة البيانات
             interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
-            
-            # بناء التقرير
-            report = build_report(
-                interaction_text,
-                drug1,
-                drug2
-            )
-
-            # عرض التقرير المطور
+            report = build_report(interaction_text, drug1, drug2)
             render_report(report)
 
 
 # --------------------------------------------------------------------
-# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (الميزة الجديدة المضافة)
+# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (الميزة الجديدة المضافة والمعدلة)
 # --------------------------------------------------------------------
 with tab2:
     st.subheader("Drug–Food Interaction Checker")
     
+    # 🔍 لوحة فحص ذكية تظهر مباشرة على الهاتف لمعرفة سبب عدم المطابقة
+    st.info("📊 Debugging Food DB JSON (منفذ الفحص السريع للهاتف):")
+    if dfi_engine.food_db:
+        st.write("• إجمالي السجلات داخل ملف الأطعمة:", len(dfi_engine.food_db))
+        st.write("• شكل أول عنصر بالكامل لمعرفة أسماء المفاتيح (Keys):", dfi_engine.food_db[0])
+        
+        # استخراج عينة لأول 5 أسماء أدوية مسجلة في الـ JSON لنرى طريقة كتابتها
+        sample_names = [item.get("drug", item.get("name", "لم يتم العثور على مفتاح الاسم")) for item in dfi_engine.food_db[:5]]
+        st.write("• عينة لأول 5 أسماء أدوية في ملف الـ JSON:", sample_names)
+    else:
+        st.error("❌ ملف JSON فارغ أو لم يتم تحميله من المسار الصحيح!")
+    
+    st.markdown("---")
+
     # اختيار دواء واحد لفحص تفاعلاته الغذائية
     selected_food_drug = st.selectbox(
         "Select Drug",
@@ -198,18 +202,26 @@ with tab2:
             st.warning("Please select a drug.")
             st.stop()
             
-        # استخدام الكود البسيط والمنظم بعد تعديل دالة المحرك لتستقبل اسم الدواء مباشرة
         result = dfi_engine.find_interactions(selected_food_drug)
 
         if result:
             st.subheader("🥦 Drug–Food Interactions")
 
-            # عرض قائمة التفاعلات الغذائية بوضوح
-            for interaction in result.get("food_interactions", []):
-                st.warning(interaction)
+            # جلب تفاعلات الأطعمة من المفتاح المخصص لها داخل القاموس
+            # تم استخدام .get() لحماية الكود من الانهيار إذا اختلف اسم المفتاح في بعض الصفوف
+            interactions = result.get("food_interactions", result.get("interactions", []))
+            
+            if isinstance(interactions, list) and interactions:
+                for interaction in interactions:
+                    st.warning(interaction)
+            elif isinstance(interactions, str):
+                st.warning(interactions)
+            else:
+                st.info("No specific food interactions text listed in this object.")
 
-            # عرض المصدر المرجعي الطبي
-            if result.get("reference"):
-                st.caption(f"**Reference:** {result['reference']}")
+            # عرض المصدر المرجعي الطبي إن وجد
+            reference = result.get("reference", result.get("source"))
+            if reference:
+                st.caption(f"**Reference:** {reference}")
         else:
-            st.success("✅ No specific food interactions found for this drug.")
+            st.error(f"❌ لم يتم العثور على مطابقة للدواء '{selected_food_drug}' داخل ملف الـ JSON الحالي.")
