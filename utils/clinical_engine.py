@@ -1,26 +1,25 @@
 import re
 
 
-def classify_severity(text: str):
+def classify_severity(text):
     text = text.lower()
 
     critical = [
         "fatal",
-        "hemorrhage",
         "bleeding",
+        "hemorrhage",
         "arrhythmia",
         "qtc prolongation",
         "torsade",
         "cardiac arrest",
-        "respiratory depression"
+        "respiratory depression",
     ]
 
     moderate = [
-        "increase serum concentration",
-        "decrease serum concentration",
         "therapeutic efficacy",
+        "serum concentration",
         "metabolism",
-        "excretion"
+        "excretion",
     ]
 
     for word in critical:
@@ -36,31 +35,80 @@ def classify_severity(text: str):
 
 def build_report(interaction_text, drug1, drug2):
 
-    sentence = interaction_text.replace("(.*)", "{}")
-    sentence = sentence.format(drug1, drug2)
+    text = interaction_text.replace("(.*)", "{}")
+    text = text.format(drug1, drug2)
 
-    severity = classify_severity(sentence)
+    severity = classify_severity(text)
 
-    recommendation = "Monitor patient clinically."
+    mechanism = "Pharmacodynamic interaction."
 
-    if "bleeding" in sentence.lower():
-        recommendation = (
-            "Avoid combination when possible. "
-            "Monitor INR and signs of bleeding."
+    recommendation = "Monitor clinically."
+
+    monitoring = "Routine clinical monitoring."
+
+    lower = text.lower()
+
+    if "bleeding" in lower:
+
+        mechanism = (
+            "Combined anticoagulant/antiplatelet effects increase bleeding risk."
         )
 
-    elif "qtc" in sentence.lower():
         recommendation = (
-            "Monitor ECG and avoid other QT-prolonging drugs."
+            "Avoid combination whenever possible. "
+            "If necessary, monitor INR closely."
         )
 
-    elif "therapeutic efficacy" in sentence.lower():
+        monitoring = (
+            "Monitor INR, CBC, hemoglobin, hematocrit and signs of bleeding."
+        )
+
+    elif "qtc" in lower:
+
+        mechanism = (
+            "Additive QT prolongation may predispose to ventricular arrhythmias."
+        )
+
+        recommendation = (
+            "Avoid concomitant QT-prolonging agents whenever possible."
+        )
+
+        monitoring = (
+            "Monitor ECG and serum potassium/magnesium."
+        )
+
+    elif "therapeutic efficacy" in lower:
+
+        mechanism = (
+            "One drug alters the pharmacological effectiveness of the other."
+        )
+
+        recommendation = (
+            "Consider dose adjustment or alternative therapy."
+        )
+
+        monitoring = (
+            "Assess therapeutic response."
+        )
+
+    elif "serum concentration" in lower:
+
+        mechanism = (
+            "Altered pharmacokinetics affecting systemic exposure."
+        )
+
         recommendation = (
             "Dose adjustment may be required."
         )
 
+        monitoring = (
+            "Monitor serum drug concentrations if available."
+        )
+
     return {
         "severity": severity,
-        "interaction": sentence,
-        "recommendation": recommendation
+        "interaction": text,
+        "mechanism": mechanism,
+        "recommendation": recommendation,
+        "monitoring": monitoring,
     }
