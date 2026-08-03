@@ -15,7 +15,19 @@ st.subheader("Drug–Drug Interaction Checker")
 # 1. تحميل ملف الأدوية المفلتر الجديد
 drug_lookup = pd.read_csv("drug_lookup.csv")
 
-# ----------------- أسطر الفحص المطلوبة (Debugging) -----------------
+# ----------------- الفحص الأول (بعد قراءة الملف مباشرة) -----------------
+st.write("Atorvastatin exists:", "Atorvastatin" in drug_lookup["drug_name"].tolist())
+st.write(
+    drug_lookup[
+        drug_lookup["drug_name"].str.contains(
+            "Ator", case=False, na=False
+        )
+    ]
+)
+st.markdown("---")
+# -----------------------------------------------------------------------
+
+# ----------------- أسطر الفحص القديمة -----------------
 st.write("### 🔍 Debugging Info (بيانات فحص الملف):")
 st.write(drug_lookup.head())
 st.write("Rows:", len(drug_lookup))
@@ -23,7 +35,6 @@ st.write("First 30 names:")
 st.write(drug_lookup["drug_name"].head(30))
 st.write("Columns in CSV:", drug_lookup.columns)
 st.markdown("---")
-# -----------------------------------------------------------------
 
 # قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
 st.write(drug_lookup.head(10))
@@ -65,6 +76,14 @@ NAME_TO_ID = dict(zip(filtered_lookup["drug_name"], filtered_lookup["drug_id"]))
 
 # قائمة الأدوية النهائية للواجهة
 drug_names = sorted(filtered_lookup["drug_name"].tolist())
+
+# ----------------- الفحص الثاني (بعد بناء قائمة drug_names النهائية) -----------------
+st.write("Total names:", len(drug_names))
+st.write(
+    [x for x in drug_names if "ator" in x.lower()]
+)
+st.markdown("---")
+# ----------------------------------------------------------------------------------
 
 st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
 
