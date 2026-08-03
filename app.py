@@ -28,17 +28,20 @@ st.markdown("---")
 # قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
 st.write(drug_lookup.head(10))
 
-# ----------------- الكود المضاف لفحص هيكل جدول التفاعلات وإيقاف التطبيق -----------------
+# ----------------- الكود المحدث لفحص الأعمدة كقواميس مقروءة -----------------
 conn = get_connection()
 
 cursor = conn.execute("PRAGMA table_info(interactions)")
+schema = cursor.fetchall()
+
 st.write("### 📊 Interactions Table Schema:")
-st.write(cursor.fetchall())
+for col in schema:
+    st.write(dict(col))
 
 st.stop()
 # ----------------------------------------------------------------------------------
 
-# ----------------- الكود السابق (لن يعمل حالياً بسبب st.stop) -----------------
+# ----------------- الكود المتبقي (لن يعمل حالياً بسبب st.stop) -----------------
 # جلب جميع المعرفات الموجودة فعلياً في قاعدة التفاعلات
 drug1_ids = pd.read_sql(
     'SELECT DISTINCT ["Drug1 ID"] AS drug_id FROM interactions',
