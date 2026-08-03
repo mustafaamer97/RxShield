@@ -28,32 +28,34 @@ st.markdown("---")
 # قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
 st.write(drug_lookup.head(10))
 
-# ----------------- الكود المحدث لفحص الأعمدة كقواميس مقروءة -----------------
+# ----------------- الكود المعدل لجلب المعرفات الفريدة بشكل صحيح -----------------
 conn = get_connection()
 
-cursor = conn.execute("PRAGMA table_info(interactions)")
-schema = cursor.fetchall()
+drug1_ids = pd.read_sql_query(
+    """
+    SELECT DISTINCT [Drug1 ID] AS drug_id
+    FROM interactions
+    """,
+    conn,
+)
 
-st.write("### 📊 Interactions Table Schema:")
-for col in schema:
-    st.write(dict(col))
+drug2_ids = pd.read_sql_query(
+    """
+    SELECT DISTINCT [Drug2 ID] AS drug_id
+    FROM interactions
+    """,
+    conn,
+)
 
-st.stop()
+valid_ids = (
+    pd.concat([drug1_ids, drug2_ids])
+    .drop_duplicates()
+)
+
+st.write("### 📊 Interactions Database Check:")
+st.write("Unique Drug IDs:", len(valid_ids))
+st.write(valid_ids.head())
 # ----------------------------------------------------------------------------------
-
-# ----------------- الكود المتبقي (لن يعمل حالياً بسبب st.stop) -----------------
-# جلب جميع المعرفات الموجودة فعلياً في قاعدة التفاعلات
-drug1_ids = pd.read_sql(
-    'SELECT DISTINCT ["Drug1 ID"] AS drug_id FROM interactions',
-    conn
-)
-
-drug2_ids = pd.read_sql(
-    'SELECT DISTINCT ["Drug2 ID"] AS drug_id FROM interactions',
-    conn
-)
-
-valid_ids = pd.concat([drug1_ids, drug2_ids]).drop_duplicates()
 
 # تصفية drug_lookup بحيث تبقى فقط الأدوية الموجودة في قاعدة التفاعلات
 filtered_lookup = drug_lookup.merge(valid_ids, on="drug_id", how="inner")
