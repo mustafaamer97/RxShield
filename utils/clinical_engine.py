@@ -5,19 +5,21 @@ from utils.clinical_rules import RULES
 
 def find_rule(text):
     """
-    يبحث عن القاعدة الطبية المطابقة للنص بناءً على الكلمات المفتاحية (Keywords).
-    إذا لم يعثر على تطابق، يرجع قاموساً افتراضياً للحالات البسيطة.
+    يبحث عن القاعدة الطبية المطابقة للنص بناءً على مصفوفة الكلمات المفتاحية (keywords).
+    إذا وجد أي كلمة مفتاحية داخل النص، يتم إرجاع القاعدة فوراً.
     """
     lower = text.lower()
 
     for rule in RULES:
-        if rule["keyword"] in lower:
-            return rule
+        for keyword in rule["keywords"]:
+            if keyword.lower() in lower:
+                # إرجاع القاعدة بالكامل بمجرد العثور على أي كلمة مطابقة
+                return rule
 
     return {
         "severity": "🟢 Minor",
         "mechanism": "Unknown mechanism.",
-        "recommendation": "Clinical monitoring.",
+        "recommendation": "Routine clinical monitoring.",
         "monitoring": "Routine monitoring.",
     }
 
@@ -67,7 +69,7 @@ def build_report(interaction_text, drug1, drug2):
     text = interaction_text.replace("(.*)", "{}")
     text = text.format(drug1, drug2)
 
-    # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية
+    # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية المتعددة
     rule = find_rule(text)
 
     # 3. إرجاع القاموس النهائي المهيكل لـ RxShield مباشرة
