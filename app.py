@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import streamlit as st
 from database.db import get_connection, get_interaction
-# 📥 استيراد الكارت السريري الجديد
+# 📥 استيراد الكارت السريري 
 from ui.cards import clinical_card
 # استيراد الدالتين معاً من المحرك الإكلينيكي
 from utils.clinical_engine import build_report, render_report
@@ -82,7 +82,7 @@ tab1, tab2 = st.tabs(
 )
 
 # --------------------------------------------------------------------
-# التبويب الأول: تفاعلات الأدوية مع بعضها البعض
+# التبويب الأول: تفاعلات الأدوية مع بعضها البعض (محدث بالكروت والتفاصيل)
 # --------------------------------------------------------------------
 with tab1:
     st.subheader("Drug–Drug Interaction Checker")
@@ -127,12 +127,32 @@ with tab1:
                 if "interaction_type" in row.keys()
                 else row["Interaction"]
             )
+            
+            # بناء التقرير
             report = build_report(interaction_text, drug1, drug2)
-            render_report(report)
+            
+            # --------------------------------------------------------------------
+            # التحديث الجديد: استبدال آلية العرض القديمة بنظام الكروت المطور
+            # --------------------------------------------------------------------
+            clinical_card(
+                title="Drug–Drug Interaction",
+                message=report["interaction"],
+                category=report["severity"],
+                recommendation=report["recommendation"],
+                reference="DrugBank Knowledge Base",
+            )
+            
+            # إضافة قائمة التفاصيل الممتدة السريرية بعد البطاقة مباشرة
+            with st.expander("🩺 Clinical Details"):
+                st.markdown("**Mechanism**")
+                st.write(report["mechanism"])
+                
+                st.markdown("**Monitoring**")
+                st.write(report["monitoring"])
 
 
 # --------------------------------------------------------------------
-# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (تم دمج كروت العرض الجديدة المحدثة)
+# التبويب الثاني: تفاعلات الأدوية مع الأطعمة
 # --------------------------------------------------------------------
 with tab2:
     st.subheader("Drug–Food Interaction Checker")
@@ -155,9 +175,6 @@ with tab2:
 
         result = dfi_engine.find_interactions(selected_food_drug)
 
-        # --------------------------------------------------------------------
-        # استبدال وتحديث جزء عرض التفاعلات الغذائية بالكامل باستخدام الكارت السريري
-        # --------------------------------------------------------------------
         if result:
             st.subheader("🥗 Drug–Food Interactions")
 
@@ -176,7 +193,6 @@ with tab2:
                         ),
                     )
             elif isinstance(interactions, str) and interactions:
-                # ميزة أمان إضافية في حال كان التفاعل نصاً واحداً وليس مصفوفة
                 clinical_card(
                     title="Drug–Food Interaction",
                     message=interactions,
