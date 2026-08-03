@@ -28,10 +28,18 @@ st.markdown("---")
 # قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
 st.write(drug_lookup.head(10))
 
-# ----------------- الكود المستبدل الجديد وتصفية الأدوية -----------------
-# جلب جميع المعرفات الموجودة فعلياً في قاعدة التفاعلات
+# ----------------- الكود المضاف لفحص هيكل جدول التفاعلات وإيقاف التطبيق -----------------
 conn = get_connection()
 
+cursor = conn.execute("PRAGMA table_info(interactions)")
+st.write("### 📊 Interactions Table Schema:")
+st.write(cursor.fetchall())
+
+st.stop()
+# ----------------------------------------------------------------------------------
+
+# ----------------- الكود السابق (لن يعمل حالياً بسبب st.stop) -----------------
+# جلب جميع المعرفات الموجودة فعلياً في قاعدة التفاعلات
 drug1_ids = pd.read_sql(
     'SELECT DISTINCT ["Drug1 ID"] AS drug_id FROM interactions',
     conn
@@ -54,7 +62,6 @@ NAME_TO_ID = dict(zip(filtered_lookup["drug_name"], filtered_lookup["drug_id"]))
 drug_names = sorted(filtered_lookup["drug_name"].tolist())
 
 st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
-# -----------------------------------------------------------------
 
 col1, col2 = st.columns(2)
 
@@ -88,7 +95,6 @@ if st.button("Check Interaction", use_container_width=True):
     if row is None:
         st.success("✅ No interaction found.")
     else:
-        # ملاحظة: تأكد أن مفتاح العلاقة في قاعدة بياناتك يطابق الاسم المستدعى هنا (مثال: 'interaction_type' أو 'Interaction')
         interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
         
         report = build_report(
