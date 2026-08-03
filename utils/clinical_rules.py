@@ -1,75 +1,79 @@
-RULES = [
+import re
+from utils.clinical_rules import RULES
 
-    {
-        "keyword": "bleeding",
-        "severity": "🔴 Critical",
-        "mechanism": "Combined anticoagulant and/or antiplatelet effects increase the risk of bleeding.",
-        "recommendation": "Avoid combination whenever possible. If unavoidable, monitor INR closely and consider dose adjustment.",
-        "monitoring": "INR, CBC, Hemoglobin, Hematocrit, signs of bleeding."
-    },
 
-    {
-        "keyword": "hemorrhage",
-        "severity": "🔴 Critical",
-        "mechanism": "Marked increase in hemorrhagic risk due to additive pharmacodynamic effects.",
-        "recommendation": "Avoid combination whenever possible.",
-        "monitoring": "CBC, Hemoglobin, clinical bleeding."
-    },
+def find_rule(text):
+    """
+    يبحث عن القاعدة الطبية المطابقة للنص بناءً على الكلمات المفتاحية (Keywords).
+    إذا لم يعثر على تطابق، يرجع قاموساً افتراضياً للحالات البسيطة.
+    """
+    lower = text.lower()
 
-    {
-        "keyword": "qtc prolongation",
-        "severity": "🔴 Critical",
-        "mechanism": "Additive QT prolongation may precipitate ventricular arrhythmias.",
-        "recommendation": "Avoid concomitant QT-prolonging medications.",
-        "monitoring": "ECG, Potassium, Magnesium."
-    },
+    for rule in RULES:
+        if rule["keyword"] in lower:
+            return rule
 
-    {
-        "keyword": "arrhythmia",
-        "severity": "🔴 Critical",
-        "mechanism": "Combined electrophysiologic effects increase arrhythmia risk.",
-        "recommendation": "Use alternative therapy when feasible.",
-        "monitoring": "ECG and cardiac monitoring."
-    },
+    return {
+        "severity": "🟢 Minor",
+        "mechanism": "Unknown mechanism.",
+        "recommendation": "Clinical monitoring.",
+        "monitoring": "Routine monitoring.",
+    }
 
-    {
-        "keyword": "cns depression",
-        "severity": "🟠 Moderate",
-        "mechanism": "Additive central nervous system depressant effects.",
-        "recommendation": "Reduce dose if needed and avoid alcohol.",
-        "monitoring": "Mental status and respiratory function."
-    },
 
-    {
-        "keyword": "therapeutic efficacy",
-        "severity": "🟠 Moderate",
-        "mechanism": "One drug reduces the pharmacologic effect of the other.",
-        "recommendation": "Consider dose adjustment or an alternative therapy.",
-        "monitoring": "Clinical response."
-    },
+def classify_severity(text):
+    """
+    ملاحظة: تم الاحتفاظ بهذه الدالة فقط كخيار احتياطي (Fallback) في الملف
+    إذا استدعتها ملفات أخرى، لكن الاعتماد الأساسي أصبح الآن على find_rule.
+    """
+    text = text.lower()
 
-    {
-        "keyword": "serum concentration",
-        "severity": "🟠 Moderate",
-        "mechanism": "Altered pharmacokinetics affecting drug exposure.",
-        "recommendation": "Dose adjustment may be required.",
-        "monitoring": "Drug serum concentrations if available."
-    },
+    critical = [
+        "fatal",
+        "bleeding",
+        "hemorrhage",
+        "arrhythmia",
+        "qtc prolongation",
+        "torsade",
+        "cardiac arrest",
+        "respiratory depression",
+    ]
 
-    {
-        "keyword": "metabolism",
-        "severity": "🟠 Moderate",
-        "mechanism": "Drug metabolism may be inhibited or induced.",
-        "recommendation": "Review metabolic pathway and adjust dose if required.",
-        "monitoring": "Clinical efficacy and adverse effects."
-    },
+    moderate = [
+        "therapeutic efficacy",
+        "serum concentration",
+        "metabolism",
+        "excretion",
+    ]
 
-    {
-        "keyword": "excretion",
-        "severity": "🟠 Moderate",
-        "mechanism": "Altered renal elimination changes drug exposure.",
-        "recommendation": "Monitor renal function.",
-        "monitoring": "Renal function and therapeutic response."
-    },
+    for word in critical:
+        if word in text:
+            return "🔴 Critical"
 
-]
+    for word in moderate:
+        if word in text:
+            return "🟠 Moderate"
+
+    return "🟢 Minor"
+
+
+def build_report(interaction_text, drug1, drug2):
+    """
+    بناء التقرير السريري الكامل للتفاعل بين الدوائين بشكل ديناميكي مبسط
+    باستخدام قاموس القواعد الموحد بدون أي جمل شرطية معقدة.
+    """
+    # 1. صياغة النص وإدراج أسماء الأدوية الحالية مكان علامات الاستبدال (.*)
+    text = interaction_text.replace("(.*)", "{}")
+    text = text.format(drug1, drug2)
+
+    # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية
+    rule = find_rule(text)
+
+    # 3. إرجاع القاموس النهائي المهيكل لـ RxShield مباشرة
+    return {
+        "severity": rule["severity"],
+        "interaction": text,
+        "mechanism": rule["mechanism"],
+        "recommendation": rule["recommendation"],
+        "monitoring": rule["monitoring"],
+    }
