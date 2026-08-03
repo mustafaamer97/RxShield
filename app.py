@@ -89,12 +89,13 @@ st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
 
 col1, col2 = st.columns(2)
 
+# ----------------- تعديل صناديق الاختيار هنا -----------------
 with col1:
     drug1 = st.selectbox(
         "Drug 1",
         drug_names,
         index=None,
-        placeholder="Select first drug"
+        placeholder="Type drug name..."
     )
 
 with col2:
@@ -102,8 +103,9 @@ with col2:
         "Drug 2",
         drug_names,
         index=None,
-        placeholder="Select second drug"
+        placeholder="Type drug name..."
     )
+# ------------------------------------------------------------
 
 if st.button("Check Interaction", use_container_width=True):
 
