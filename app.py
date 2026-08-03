@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from database.db import get_interaction, get_connection
-from utils.clinical_engine import build_report
+# استيراد الدالتين معاً من المحرك الإكلينيكي
+from utils.clinical_engine import build_report, render_report
 
 st.set_page_config(
     page_title="RxShield",
@@ -36,7 +37,7 @@ st.write(drug_lookup["drug_name"].head(30))
 st.write("Columns in CSV:", drug_lookup.columns)
 st.markdown("---")
 
-# قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
+# معاينة أول 10 صفوف من البيانات على الواجهة فوراً
 st.write(drug_lookup.head(10))
 
 # ----------------- الكود المعدل لجلب المعرفات الفريدة بشكل صحيح -----------------
@@ -121,31 +122,17 @@ if st.button("Check Interaction", use_container_width=True):
     if row is None:
         st.success("✅ No interaction found.")
     else:
-        # ملاحظة: تأكد أن مفتاح العلاقة في قاعدة بياناتك يطابق الاسم المستدعى هنا (مثال: 'interaction_type' أو 'Interaction')
+        # التأكد من مطابقة مفتاح التفاعل في قاعدة البيانات
         interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
         
+        # بناء التقرير
         report = build_report(
             interaction_text,
             drug1,
             drug2
         )
 
-        # ----------------- التقرير الطبي الكامل -----------------
-        st.markdown("## 🛡️ RxShield Clinical Report")
-
-        st.error(report["severity"])
-
-        st.markdown("### 🧬 Clinical Effect")
-
-        st.info(report["interaction"])
-
-        st.markdown("### 📋 Recommendation")
-
-        st.success(report["recommendation"])
-
-        st.markdown("### ⚙️ Mechanism")
-        st.info(report["mechanism"])
-
-        st.markdown("### 🩺 Monitoring")
-        st.warning(report["monitoring"])
+        # ----------------- عرض التقرير المطور -----------------
+        # تم استبدال جميع أسطر العرض القديمة والحذف بالكامل بهذا الاستدعاء النظيف:
+        render_report(report)
         # -------------------------------------------------------------------
