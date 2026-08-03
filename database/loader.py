@@ -1,19 +1,50 @@
 import json
 
-with open("drug_info.json", "r", encoding="utf-8") as f:
-    DRUGS = json.load(f)
-
-# قاموس: الاسم → DrugBank ID
+# قواميس البحث الفوري (Global Dictionaries)
 NAME_TO_ID = {}
-
-# قاموس: DrugBank ID → الاسم
 ID_TO_NAME = {}
+DRUGS = {}
 
-for drug_id, info in DRUGS.items():
 
-    name = info.get("name", "").strip()
+def load_drug_data():
+    """تحميل بيانات الأدوية وبناء قواميس البحث السريع"""
+    global DRUGS, NAME_TO_ID, ID_TO_NAME
 
-    if name:
-        NAME_TO_ID[name.lower()] = drug_id
-        ID_TO_NAME[drug_id] = name
-print(next(iter(DRUGS.items())))
+    try:
+        with open("drug_info.json", "r", encoding="utf-8") as f:
+            DRUGS = json.load(f)
+
+        # بناء القواميس لتسهيل عملية البحث
+        for drug_id, info in DRUGS.items():
+            name = info.get("name", "").strip()
+            if name:
+                NAME_TO_ID[name.lower()] = drug_id
+                ID_TO_NAME[drug_id] = name
+
+        print("تم تحميل بيانات الأدوية بنجاح.")
+        # طباعة العنصر الأول للتأكد من بنية الملف
+        print("عينة من البيانات:", next(iter(DRUGS.items())))
+
+    except FileNotFoundError:
+        print("خطأ: لم يتم العثور على ملف drug_info.json")
+
+
+def load_food_interactions():
+    """تحميل ملف التفاعلات بين الأدوية والأطعمة"""
+    try:
+        with open(
+            "Drug to Food interactions Dataset.json",
+            "r",
+            encoding="utf-8",
+        ) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(
+            "خطأ: لم يتم العثور على ملف Drug to Food interactions Dataset.json"
+        )
+        return {}
+
+
+# --- تشغيل الدوال وتحميل البيانات ---
+load_drug_data()
+food_interactions = load_food_interactions()
