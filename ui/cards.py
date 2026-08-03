@@ -2,62 +2,29 @@ import streamlit as st
 
 
 def clinical_card(
-    title,
-    message,
-    category="Clinical Information",
-    recommendation=None,
-    reference=None,
+    title: str,
+    category: str,
+    items,
+    recommendation: str | None = None,
+    reference: str | None = None,
 ):
 
-    st.markdown(
-        f"""
-<div style="
-background-color:#F8F9FA;
-padding:18px;
-margin-top:12px;
-margin-bottom:18px;
-border-radius:12px;
-border-left:6px solid #D32F2F;
-box-shadow:0px 2px 8px rgba(0,0,0,0.08);
-">
+    with st.container(border=True):
 
-<h4 style="margin-bottom:10px;">
-🛡️ {title}
-</h4>
+        st.subheader(f"🛡️ {title}")
 
-<p style="margin-bottom:6px;">
-<b>📂 Category</b><br>
-{category}
-</p>
+        st.markdown(f"**📂 Category:** {category}")
 
-<p style="margin-bottom:6px;">
-<b>⚠️ Clinical Advice</b><br>
-{message}
-</p>
-""",
-        unsafe_allow_html=True,
-    )
+        st.divider()
 
-    if recommendation:
-        st.markdown(
-            f"""
-<p style="margin-bottom:6px;">
-<b>✅ Recommendation</b><br>
-{recommendation}
-</p>
-""",
-            unsafe_allow_html=True,
-        )
+        st.markdown("### ⚠️ Clinical Advice")
 
-    if reference:
-        st.markdown(
-            """
-<p style="margin-bottom:0px;">
-<b>📚 Source</b><br>
-DrugBank 6.0 (Knox et al., 2024)
-</p>
-""",
-            unsafe_allow_html=True,
-        )
+        for item in items:
+            st.markdown(f"- {item}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        if recommendation:
+            st.divider()
+            st.success(f"**Recommendation**\n\n{recommendation}")
+
+        if reference:
+            st.caption("📚 Source: DrugBank 6.0 (Knox et al., 2024)")
