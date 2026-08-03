@@ -1,0 +1,30 @@
+[
+  {
+    "keyword": "bleeding",
+    "severity": "🔴 Critical",
+    "mechanism": "Combined anticoagulant/antiplatelet effects increase bleeding risk.",
+    "recommendation": "Avoid combination whenever possible. Monitor INR closely if unavoidable.",
+    "monitoring": "INR, CBC, Hemoglobin, Hematocrit."
+  },
+  {
+    "keyword": "qtc prolongation",
+    "severity": "🔴 Critical",
+    "mechanism": "Additive QT prolongation increases the risk of ventricular arrhythmias.",
+    "recommendation": "Avoid combining QT-prolonging agents whenever possible.",
+    "monitoring": "ECG, Potassium, Magnesium."
+  },
+  {
+    "keyword": "cns depression",
+    "severity": "🔴 Critical",
+    "mechanism": "Additive CNS depressant effects.",
+    "recommendation": "Avoid concomitant use when possible.",
+    "monitoring": "Respiratory rate, oxygen saturation, consciousness."
+  },
+  {
+    "keyword": "therapeutic efficacy",
+    "severity": "🟠 Moderate",
+    "mechanism": "Reduced pharmacologic effectiveness.",
+    "recommendation": "Consider dose adjustment or alternative therapy.",
+    "monitoring": "Clinical response."
+  }
+]
