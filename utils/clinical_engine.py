@@ -1,3 +1,5 @@
+# utils/clinical_engine.py
+
 import re
 import streamlit as st
 from utils.clinical_rules import RULES
@@ -23,6 +25,8 @@ def find_rule(text):
             "mechanism": "Unknown mechanism.",
             "recommendation": "Clinical monitoring.",
             "monitoring": "Routine monitoring.",
+            "interpretation": "Clinical significance requires professional assessment.",
+            "interaction_type": "Unknown"
         }
 
     severity_order = {
@@ -36,17 +40,26 @@ def find_rule(text):
         reverse=True,
     )
 
+    # جمع الحقول الفرعية مع دعم المفاتيح الجديدة المضافة في القواعد
     return {
         "severity": matches[0]["severity"],
         "mechanism": " | ".join(
-            dict.fromkeys(r["mechanism"] for r in matches)
+            dict.fromkeys(r["mechanism"] for r in matches if "mechanism" in r)
         ),
         "recommendation": " | ".join(
-            dict.fromkeys(r["recommendation"] for r in matches)
+            dict.fromkeys(r["recommendation"] for r in matches if "recommendation" in r)
         ),
         "monitoring": " | ".join(
-            dict.fromkeys(r["monitoring"] for r in matches)
+            dict.fromkeys(r["monitoring"] for r in matches if "monitoring" in r)
         ),
+        "interpretation": matches[0].get(
+            "interpretation", 
+            "Clinical significance requires professional assessment."
+        ),
+        "interaction_type": matches[0].get(
+            "interaction_type", 
+            "Unknown"
+        )
     }
 
 
@@ -120,41 +133,6 @@ def extract_clinical_features(text):
     return features
 
 
-def classify_severity(text):
-    """
-    ملاحظة: تم الاحتفاظ بهذه الدالة فقط كخيار احتياطي (Fallback) في الملف.
-    """
-    text = text.lower()
-
-    critical = [
-        "fatal",
-        "bleeding",
-        "hemorrhage",
-        "arrhythmia",
-        "qtc prolongation",
-        "torsade",
-        "cardiac arrest",
-        "respiratory depression",
-    ]
-
-    moderate = [
-        "therapeutic efficacy",
-        "serum concentration",
-        "metabolism",
-        "excretion",
-    ]
-
-    for word in critical:
-        if word in text:
-            return "🔴 Critical"
-
-    for word in moderate:
-        if word in text:
-            return "🟠 Moderate"
-
-    return "🟢 Minor"
-
-
 def enhance_recommendation(report):
     """
     تقوم بتعديل التوصيات ديناميكياً لتوفير إرشادات سريرية دقيقة وقابلة للتطبيق 
@@ -203,15 +181,21 @@ def build_report(interaction_text, drug1, drug2):
     # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية
     rule = find_rule(text)
 
-    # 3. استخراج المظهر والنوع والإنزيمات سريرياً
+    # 3. استخراج المظهر والنوع والإنزيمات سريرياً (احتياطي للبيانات القديمة)
     features = extract_clinical_features(text)
 
-    # 4. صياغة القاموس الأولي للتقرير
+    # 4. صياغة القاموس الأولي للتقرير بناءً على التعديل الجديد المطلوب
     report = {
         "severity": rule["severity"],
         "interaction": text,
-        "clinical_effect": features["effect"],
-        "interaction_type": features["pk_pd"],
+        "interpretation": rule.get(
+            "interpretation",
+            "Clinical significance requires professional assessment."
+        ),
+        "interaction_type": rule.get(
+            "interaction_type",
+            features["pk_pd"] if features["pk_pd"] else "Unknown"
+        ),
         "enzyme": features["enzyme"],
         "mechanism": rule["mechanism"],
         "recommendation": rule["recommendation"],
@@ -236,14 +220,12 @@ def render_report(report):
     st.markdown("## 🧬 Clinical Effect")
     st.info(report["interaction"])
 
-    # عرض التفسير السريري المباشر ونوع التداخل والإنزيمات إن وجدت
-    if report.get("clinical_effect"):
-        st.markdown("### Clinical Interpretation")
-        st.success(report["clinical_effect"])
+    # التعديل الجديد: إدراج حقول الـ Interpretation و Interaction Type مباشرة بعد الـ Clinical Effect
+    st.markdown("## Clinical Interpretation")
+    st.success(report["interpretation"])
 
-    if report["interaction_type"]:
-        st.markdown("## 🧪 Interaction Type")
-        st.success(report["interaction_type"])
+    st.markdown("## 🧪 Interaction Type")
+    st.success(report["interaction_type"])
 
     if report["enzyme"]:
         st.markdown("## 🧬 Enzyme")
