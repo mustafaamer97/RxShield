@@ -1,6 +1,9 @@
 # utils/clinical_rules.py
 
 RULES = [
+    # ==========================================
+    # CRITICAL RULES (🔴 Critical)
+    # ==========================================
     {
         "keywords": [
             "bleeding",
@@ -40,7 +43,8 @@ RULES = [
         "keywords": [
             "cns depression",
             "sedation",
-            "somnolence"
+            "somnolence",
+            "cns depressant"
         ],
         "severity": "🔴 Critical",
         "mechanism": "Additive central nervous system depression.",
@@ -50,10 +54,11 @@ RULES = [
     {
         "keywords": [
             "serotonin syndrome",
-            "serotonergic"
+            "serotonergic",
+            "serotonin"
         ],
         "severity": "🔴 Critical",
-        "mechanism": "Excess serotonergic activity.",
+        "mechanism": "Excess serotonergic activity and stimulation.",
         "recommendation": "Discontinue serotonergic agents immediately if suspected.",
         "monitoring": "Mental status, body temperature, blood pressure, and clonus."
     },
@@ -61,22 +66,24 @@ RULES = [
         "keywords": [
             "nephrotoxicity",
             "renal toxicity",
-            "kidney injury"
+            "kidney injury",
+            "acute kidney injury"
         ],
         "severity": "🔴 Critical",
-        "mechanism": "Additive renal toxicity.",
-        "recommendation": "Avoid nephrotoxic combinations.",
-        "monitoring": "Serum creatinine, eGFR, and fluid balance."
+        "mechanism": "Additive nephrotoxic effects.",
+        "recommendation": "Avoid prolonged co-administration.",
+        "monitoring": "Serum creatinine (SCr), eGFR, and fluid balance/urine output."
     },
     {
         "keywords": [
             "hepatotoxicity",
             "liver injury",
-            "hepatic impairment"
+            "hepatic impairment",
+            "hepatic toxicity"
         ],
         "severity": "🔴 Critical",
-        "mechanism": "Drug-induced liver injury.",
-        "recommendation": "Avoid hepatotoxic combinations.",
+        "mechanism": "Drug-induced liver injury / Additive hepatic toxicity.",
+        "recommendation": "Avoid hepatotoxic combinations or monitor closely.",
         "monitoring": "Liver function tests (ALT, AST, bilirubin, alkaline phosphatase)."
     },
     {
@@ -86,19 +93,34 @@ RULES = [
             "muscle toxicity"
         ],
         "severity": "🔴 Critical",
-        "mechanism": "Drug-induced muscle toxicity ranging from myopathy to severe skeletal muscle injury (Rhabdomyolysis).",
+        "mechanism": "Drug-induced muscle toxicity ranging from myopathy to severe skeletal muscle injury (Rhabdomyolysis) due to marked increase in exposure.",
         "recommendation": "Discontinue therapy immediately if severe; consider alternative therapy for mild cases.",
         "monitoring": "Creatine Kinase (CK) levels and renal function."
     },
+    
+    # ==========================================
+    # CYP ENZYMES & PHARMACOKINETICS (🔴 Critical)
+    # ==========================================
+    {
+        "keywords": ["cyp3a4", "cyp2d6", "cyp2c9", "cyp2c19"],
+        "severity": "🔴 Critical",
+        "mechanism": "Cytochrome P450 enzyme inhibition decreases drug metabolism causing elevated plasma concentration and potential toxicity.",
+        "recommendation": "Avoid combination or adjust dose significantly.",
+        "monitoring": "Monitor toxicity, liver function, and ECG when applicable."
+    },
+
+    # ==========================================
+    # MODERATE RULES (🟠 Moderate)
+    # ==========================================
     {
         "keywords": [
             "hyperkalemia",
             "elevated potassium"
         ],
         "severity": "🟠 Moderate",
-        "mechanism": "Potassium accumulation.",
+        "mechanism": "Potassium accumulation due to additive potassium retention.",
         "recommendation": "Avoid multiple potassium-elevating drugs.",
-        "monitoring": "Serum potassium levels."
+        "monitoring": "Serum potassium levels and renal function."
     },
     {
         "keywords": [
@@ -130,8 +152,8 @@ RULES = [
             "cyp modulation"
         ],
         "severity": "🟠 Moderate",
-        "mechanism": "Pharmacokinetic interaction affecting drug metabolism, excretion, or systemic exposure.",
+        "mechanism": "Pharmacokinetic interaction affecting drug metabolism, excretion, or systemic exposure via enzyme modulation.",
         "recommendation": "Dose adjustment may be required.",
-        "monitoring": "Serum drug levels if available, along with monitoring for toxicity."
+        "monitoring": "Monitor therapeutic response, serum drug levels if available, and adverse effects."
     }
 ]
