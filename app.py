@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from database.db import get_interaction
+from database.db import get_interaction, get_connection
 from utils.clinical_engine import build_report
 
 st.set_page_config(
@@ -28,11 +28,33 @@ st.markdown("---")
 # قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
 st.write(drug_lookup.head(10))
 
-# 2. بناء القواميس ديناميكياً من الملف
-NAME_TO_ID = dict(zip(drug_lookup["drug_name"], drug_lookup["drug_id"]))
+# ----------------- الكود المستبدل الجديد وتصفية الأدوية -----------------
+# جلب جميع المعرفات الموجودة فعلياً في قاعدة التفاعلات
+conn = get_connection()
 
-# 3. بناء قائمة الأسماء المرتبة أبجدياً لواجهة المستخدم
-drug_names = sorted(drug_lookup["drug_name"].tolist())
+drug1_ids = pd.read_sql(
+    'SELECT DISTINCT ["Drug1 ID"] AS drug_id FROM interactions',
+    conn
+)
+
+drug2_ids = pd.read_sql(
+    'SELECT DISTINCT ["Drug2 ID"] AS drug_id FROM interactions',
+    conn
+)
+
+valid_ids = pd.concat([drug1_ids, drug2_ids]).drop_duplicates()
+
+# تصفية drug_lookup بحيث تبقى فقط الأدوية الموجودة في قاعدة التفاعلات
+filtered_lookup = drug_lookup.merge(valid_ids, on="drug_id", how="inner")
+
+# بناء القواميس من البيانات المفلترة
+NAME_TO_ID = dict(zip(filtered_lookup["drug_name"], filtered_lookup["drug_id"]))
+
+# قائمة الأدوية النهائية للواجهة
+drug_names = sorted(filtered_lookup["drug_name"].tolist())
+
+st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
+# -----------------------------------------------------------------
 
 col1, col2 = st.columns(2)
 
