@@ -50,10 +50,79 @@ def find_rule(text):
     }
 
 
+def extract_clinical_features(text):
+    """
+    تستخرج تفاصيل الحركية الدوائية (PK) والديناميكية الدوائية (PD) والإنزيمات 
+    المتأثرة (CYP Enzymes) مباشرة من نص التداخل.
+    """
+    lower = text.lower()
+
+    features = {
+        "effect": None,
+        "pk_pd": None,
+        "enzyme": None,
+        "change": None,
+    }
+
+    # --------------------------
+    # Pharmacokinetics
+    # --------------------------
+    if "serum concentration" in lower:
+        features["pk_pd"] = "Pharmacokinetic"
+
+        if "increase" in lower or "increased" in lower:
+            features["effect"] = "Increased serum concentration"
+            features["change"] = "Increase"
+        elif "decrease" in lower or "decreased" in lower:
+            features["effect"] = "Decreased serum concentration"
+            features["change"] = "Decrease"
+
+    # --------------------------
+    # Therapeutic efficacy
+    # --------------------------
+    elif "therapeutic efficacy" in lower:
+        features["pk_pd"] = "Pharmacodynamic"
+        features["effect"] = "Reduced therapeutic efficacy"
+
+    # --------------------------
+    # Bleeding
+    # --------------------------
+    elif "bleeding" in lower or "hemorrhage" in lower:
+        features["pk_pd"] = "Pharmacodynamic"
+        features["effect"] = "Major bleeding risk"
+
+    # --------------------------
+    # QT
+    # --------------------------
+    elif "qtc prolongation" in lower:
+        features["pk_pd"] = "Pharmacodynamic"
+        features["effect"] = "QT prolongation"
+
+    # --------------------------
+    # Arrhythmia
+    # --------------------------
+    elif "arrhythmia" in lower:
+        features["pk_pd"] = "Pharmacodynamic"
+        features["effect"] = "Cardiac arrhythmia"
+
+    # --------------------------
+    # CYP Enzymes
+    # --------------------------
+    if "cyp3a4" in lower:
+        features["enzyme"] = "CYP3A4"
+    elif "cyp2d6" in lower:
+        features["enzyme"] = "CYP2D6"
+    elif "cyp2c9" in lower:
+        features["enzyme"] = "CYP2C9"
+    elif "cyp2c19" in lower:
+        features["enzyme"] = "CYP2C19"
+
+    return features
+
+
 def classify_severity(text):
     """
-    ملاحظة: تم الاحتفاظ بهذه الدالة فقط كخيار احتياطي (Fallback) في الملف
-    إذا استدعتها ملفات أخرى، لكن الاعتماد الأساسي أصبح الآن على find_rule.
+    ملاحظة: تم الاحتفاظ بهذه الدالة فقط كخيار احتياطي (Fallback) في الملف.
     """
     text = text.lower()
 
@@ -89,19 +158,25 @@ def classify_severity(text):
 def build_report(interaction_text, drug1, drug2):
     """
     بناء التقرير السريري الكامل للتفاعل بين الدوائين بشكل ديناميكي مبسط
-    باستخدام قاموس القواعد الموحد بدون أي جمل شرطية معقدة.
+    مع ربط السمات السريرية والتفسير الدوائي المطور لـ RxShield.
     """
     # 1. صياغة النص وإدراج أسماء الأدوية الحالية مكان علامات الاستبدال (.*)
     text = interaction_text.replace("(.*)", "{}")
     text = text.format(drug1, drug2)
 
-    # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية المتعددة
+    # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية
     rule = find_rule(text)
 
-    # 3. إرجاع القاموس النهائي المهيكل لـ RxShield مباشرة
+    # 3. استخراج المظهر والنوع والإنزيمات سريرياً
+    features = extract_clinical_features(text)
+
+    # 4. إرجاع القاموس النهائي المهيكل لـ RxShield مباشرة
     return {
         "severity": rule["severity"],
         "interaction": text,
+        "clinical_effect": features["effect"],
+        "interaction_type": features["pk_pd"],
+        "enzyme": features["enzyme"],
         "mechanism": rule["mechanism"],
         "recommendation": rule["recommendation"],
         "monitoring": rule["monitoring"],
@@ -119,6 +194,19 @@ def render_report(report):
 
     st.markdown("## 🧬 Clinical Effect")
     st.info(report["interaction"])
+
+    # عرض التفسير السريري المباشر ونوع التداخل والإنزيمات إن وجدت
+    if report.get("clinical_effect"):
+        st.markdown("### Clinical Interpretation")
+        st.success(report["clinical_effect"])
+
+    if report["interaction_type"]:
+        st.markdown("## 🧪 Interaction Type")
+        st.success(report["interaction_type"])
+
+    if report["enzyme"]:
+        st.markdown("## 🧬 Enzyme")
+        st.info(report["enzyme"])
 
     st.markdown("## 📋 Recommendation")
     st.success(report["recommendation"])
