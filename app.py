@@ -15,6 +15,16 @@ st.subheader("Drug–Drug Interaction Checker")
 # 1. تحميل ملف الأدوية المفلتر الجديد
 drug_lookup = pd.read_csv("drug_lookup.csv")
 
+# ----------------- أسطر الفحص المطلوبة (Debugging) -----------------
+st.write("### 🔍 Debugging Info (بيانات فحص الملف):")
+st.write(drug_lookup.head())
+st.write("Rows:", len(drug_lookup))
+st.write("First 30 names:")
+st.write(drug_lookup["drug_name"].head(30))
+st.write("Columns in CSV:", drug_lookup.columns)
+st.markdown("---")
+# -----------------------------------------------------------------
+
 # قمنا بإضافة السطر هنا لمعاينة أول 10 صفوف من البيانات على الواجهة فوراً
 st.write(drug_lookup.head(10))
 
