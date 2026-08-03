@@ -17,22 +17,22 @@ class DrugFoodInteractionEngine:
         if not drug_name:
             return None
 
-        # تحويل النص لحروف صغيرة موحدة وإزالة الفراغات الزائدة
+        # تنظيف وتحويل نص البحث لحروف صغيرة
         query = drug_name.strip().casefold()
+        # استخراج الكلمة الأولى من اسم الدواء للبحث المرن (مثال: Warfarin Sodium تصبح warfarin)
+        query_first_word = query.split()[0] if query.split() else query
 
         for item in self.food_db:
-            # محاولة جلب اسم الدواء من المفاتيح المتوقعة (drug أو name)
-            name = item.get("drug", item.get("name", "")).strip().casefold()
+            name = item.get("name", "").strip().casefold()
             
-            # مطابقة مرنة فائقة (تطابق كامل، أو احتواء نصي متبادل)
-            if query == name or query in name or name in query:
+            # مطابقة ذكية فائقة المرونة
+            if query == name or query in name or name in query or query_first_word in name:
                 return item
 
         return None
 
 # تهيئة المحرك
 dfi_engine = DrugFoodInteractionEngine()
-
 
 st.set_page_config(
     page_title="RxShield",
@@ -42,84 +42,26 @@ st.set_page_config(
 
 st.title("🛡️ RxShield")
 
-# 1. تحميل ملف الأدوية المفلتر الجديد
+# تحميل ملف الأدوية المفلتر الجديد
 drug_lookup = pd.read_csv("drug_lookup.csv")
 
-# ----------------- الفحص الأول (بعد قراءة الملف مباشرة) -----------------
-st.write("Atorvastatin exists:", "Atorvastatin" in drug_lookup["drug_name"].tolist())
-st.write(
-    drug_lookup[
-        drug_lookup["drug_name"].str.contains(
-            "Ator", case=False, na=False
-        )
-    ]
-)
-st.markdown("---")
-# -----------------------------------------------------------------------
-
-# ----------------- أسطر الفحص القديمة -----------------
-st.write("### 🔍 Debugging Info (بيانات فحص الملف):")
-st.write(drug_lookup.head())
-st.write("Rows:", len(drug_lookup))
-st.write("First 30 names:")
-st.write(drug_lookup["drug_name"].head(30))
-st.write("Columns in CSV:", drug_lookup.columns)
-st.markdown("---")
-
-# معاينة أول 10 صفوف من البيانات على الواجهة فوراً
-st.write(drug_lookup.head(10))
-
-# ----------------- الكود المعدل لجلب المعرفات الفريدة بشكل صحيح -----------------
+# جلب المعرفات الفريدة من قاعدة البيانات
 conn = get_connection()
 
-drug1_ids = pd.read_sql_query(
-    """
-    SELECT DISTINCT [Drug1 ID] AS drug_id
-    FROM interactions
-    """,
-    conn,
-)
+drug1_ids = pd.read_sql_query("SELECT DISTINCT [Drug1 ID] AS drug_id FROM interactions", conn)
+drug2_ids = pd.read_sql_query("SELECT DISTINCT [Drug2 ID] AS drug_id FROM interactions", conn)
 
-drug2_ids = pd.read_sql_query(
-    """
-    SELECT DISTINCT [Drug2 ID] AS drug_id
-    FROM interactions
-    """,
-    conn,
-)
+valid_ids = pd.concat([drug1_ids, drug2_ids]).drop_duplicates()
 
-valid_ids = (
-    pd.concat([drug1_ids, drug2_ids])
-    .drop_duplicates()
-)
-
-st.write("### 📊 Interactions Database Check:")
-st.write("Unique Drug IDs:", len(valid_ids))
-st.write(valid_ids.head())
-# ----------------------------------------------------------------------------------
-
-# تصفية drug_lookup بحيث تبقى فقط الأدوية الموجودة في قاعدة التفاعلات
+# تصفية أدوية الواجهة لبناء القواميس
 filtered_lookup = drug_lookup.merge(valid_ids, on="drug_id", how="inner")
-
-# بناء القواميس من البيانات المفلترة
 NAME_TO_ID = dict(zip(filtered_lookup["drug_name"], filtered_lookup["drug_id"]))
-
-# قائمة الأدوية النهائية للواجهة
 drug_names = sorted(filtered_lookup["drug_name"].tolist())
-
-# ----------------- الفحص الثاني (بعد بناء قائمة drug_names النهائية) -----------------
-st.write("Total names:", len(drug_names))
-st.write(
-    [x for x in drug_names if "ator" in x.lower()]
-)
-st.markdown("---")
-# ----------------------------------------------------------------------------------
 
 st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
 
-
 # ====================================================================
-# ✨ إنشاء التبويبات لفصل الميزتين بشكل احترافي
+# ✨ التبويبات الرسمية والتطبيق المستقر
 # ====================================================================
 tab1, tab2 = st.tabs(["💊 Drug–Drug Interaction", "🍎 Drug–Food Interaction"])
 
@@ -150,7 +92,6 @@ with tab1:
         )
 
     if st.button("Check Interaction", use_container_width=True, key="btn_dd_check"):
-
         if not drug1 or not drug2:
             st.warning("Please select both drugs.")
             st.stop()
@@ -169,25 +110,11 @@ with tab1:
 
 
 # --------------------------------------------------------------------
-# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (الميزة الجديدة المضافة والمعدلة)
+# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (مُحدثة ونظيفة بالكامل)
 # --------------------------------------------------------------------
 with tab2:
     st.subheader("Drug–Food Interaction Checker")
     
-    # 🔍 لوحة فحص ذكية تظهر مباشرة على الهاتف لمعرفة سبب عدم المطابقة
-    st.info("📊 Debugging Food DB JSON (منفذ الفحص السريع للهاتف):")
-    if dfi_engine.food_db:
-        st.write("• إجمالي السجلات داخل ملف الأطعمة:", len(dfi_engine.food_db))
-        st.write("• شكل أول عنصر بالكامل لمعرفة أسماء المفاتيح (Keys):", dfi_engine.food_db[0])
-        
-        # استخراج عينة لأول 5 أسماء أدوية مسجلة في الـ JSON لنرى طريقة كتابتها
-        sample_names = [item.get("drug", item.get("name", "لم يتم العثور على مفتاح الاسم")) for item in dfi_engine.food_db[:5]]
-        st.write("• عينة لأول 5 أسماء أدوية في ملف الـ JSON:", sample_names)
-    else:
-        st.error("❌ ملف JSON فارغ أو لم يتم تحميله من المسار الصحيح!")
-    
-    st.markdown("---")
-
     # اختيار دواء واحد لفحص تفاعلاته الغذائية
     selected_food_drug = st.selectbox(
         "Select Drug",
@@ -205,11 +132,9 @@ with tab2:
         result = dfi_engine.find_interactions(selected_food_drug)
 
         if result:
-            st.subheader("🥦 Drug–Food Interactions")
+            st.subheader(f"🥦 Drug–Food Interactions for {result.get('name', selected_food_drug)}")
 
-            # جلب تفاعلات الأطعمة من المفتاح المخصص لها داخل القاموس
-            # تم استخدام .get() لحماية الكود من الانهيار إذا اختلف اسم المفتاح في بعض الصفوف
-            interactions = result.get("food_interactions", result.get("interactions", []))
+            interactions = result.get("food_interactions", [])
             
             if isinstance(interactions, list) and interactions:
                 for interaction in interactions:
@@ -217,11 +142,9 @@ with tab2:
             elif isinstance(interactions, str):
                 st.warning(interactions)
             else:
-                st.info("No specific food interactions text listed in this object.")
+                st.info("No explicit food interaction text details found.")
 
-            # عرض المصدر المرجعي الطبي إن وجد
-            reference = result.get("reference", result.get("source"))
-            if reference:
-                st.caption(f"**Reference:** {reference}")
+            if result.get("reference"):
+                st.caption(f"**Reference:** {result['reference']}")
         else:
-            st.error(f"❌ لم يتم العثور على مطابقة للدواء '{selected_food_drug}' داخل ملف الـ JSON الحالي.")
+            st.info(f"ℹ️ No specific food interactions found for '{selected_food_drug}' in the current database.")
