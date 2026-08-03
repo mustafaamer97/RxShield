@@ -5,22 +5,48 @@ from utils.clinical_rules import RULES
 
 def find_rule(text):
     """
-    يبحث عن القاعدة الطبية المطابقة للنص بناءً على مصفوفة الكلمات المفتاحية (keywords).
-    إذا وجد أي كلمة مفتاحية داخل النص، يتم إرجاع القاعدة فوراً.
+    يبحث عن القواعد الطبية المطابقة للنص بناءً على مصفوفة الكلمات المفتاحية (keywords).
+    يقوم بفرز النتائج تنازلياً حسب الخطورة ودمج الآليات والتوصيات بدون تكرار.
     """
     lower = text.lower()
+    matches = []
 
     for rule in RULES:
         for keyword in rule["keywords"]:
             if keyword.lower() in lower:
-                # إرجاع القاعدة بالكامل بمجرد العثور على أي كلمة مطابقة
-                return rule
+                matches.append(rule)
+                break  # تجنب إضافة نفس القاعدة مرتين إذا وجد مرادفين في نفس النص
+
+    if not matches:
+        return {
+            "severity": "🟢 Minor",
+            "mechanism": "Unknown mechanism.",
+            "recommendation": "Clinical monitoring.",
+            "monitoring": "Routine monitoring.",
+        }
+
+    severity_order = {
+        "🔴 Critical": 3,
+        "🟠 Moderate": 2,
+        "🟢 Minor": 1,
+    }
+
+    matches.sort(
+        key=lambda r: severity_order.get(r["severity"], 0),
+        reverse=True,
+    )
 
     return {
-        "severity": "🟢 Minor",
-        "mechanism": "Unknown mechanism.",
-        "recommendation": "Routine clinical monitoring.",
-        "monitoring": "Routine monitoring.",
+        "severity": matches[0]["severity"],
+        "mechanism": " | ".join(
+            dict.fromkeys(r["mechanism"] for r in matches)
+        ),
+        "recommendation": " | ".join(
+            dict.fromkeys(r["recommendation"] for r in matches)
+        ),
+        "monitoring": " | ".join(
+            dict.fromkeys(r["monitoring"] for r in matches)
+        ),
     }
 
 
