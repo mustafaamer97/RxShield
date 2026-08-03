@@ -2,13 +2,21 @@ import json
 import pandas as pd
 import streamlit as st
 from database.db import get_connection, get_interaction
+# 📥 استيراد الكارت السريري الجديد
+from ui.cards import clinical_card
 # استيراد الدالتين معاً من المحرك الإكلينيكي
 from utils.clinical_engine import build_report, render_report
 
+
 class DrugFoodInteractionEngine:
+
     def __init__(self):
         try:
-            with open("Drug to Food interactions Dataset.json", "r", encoding="utf-8") as f:
+            with open(
+                "Drug to Food interactions Dataset.json",
+                "r",
+                encoding="utf-8",
+            ) as f:
                 self.food_db = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             self.food_db = []
@@ -24,21 +32,23 @@ class DrugFoodInteractionEngine:
 
         for item in self.food_db:
             name = item.get("name", "").strip().casefold()
-            
+
             # مطابقة ذكية فائقة المرونة
-            if query == name or query in name or name in query or query_first_word in name:
+            if (
+                query == name
+                or query in name
+                or name in query
+                or query_first_word in name
+            ):
                 return item
 
         return None
 
+
 # تهيئة المحرك
 dfi_engine = DrugFoodInteractionEngine()
 
-st.set_page_config(
-    page_title="RxShield",
-    page_icon="🛡️",
-    layout="wide"
-)
+st.set_page_config(page_title="RxShield", page_icon="🛡️", layout="wide")
 
 st.title("🛡️ RxShield")
 
@@ -48,8 +58,12 @@ drug_lookup = pd.read_csv("drug_lookup.csv")
 # جلب المعرفات الفريدة من قاعدة البيانات
 conn = get_connection()
 
-drug1_ids = pd.read_sql_query("SELECT DISTINCT [Drug1 ID] AS drug_id FROM interactions", conn)
-drug2_ids = pd.read_sql_query("SELECT DISTINCT [Drug2 ID] AS drug_id FROM interactions", conn)
+drug1_ids = pd.read_sql_query(
+    "SELECT DISTINCT [Drug1 ID] AS drug_id FROM interactions", conn
+)
+drug2_ids = pd.read_sql_query(
+    "SELECT DISTINCT [Drug2 ID] AS drug_id FROM interactions", conn
+)
 
 valid_ids = pd.concat([drug1_ids, drug2_ids]).drop_duplicates()
 
@@ -63,7 +77,9 @@ st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
 # ====================================================================
 # ✨ التبويبات الرسمية والتطبيق المستقر
 # ====================================================================
-tab1, tab2 = st.tabs(["💊 Drug–Drug Interaction", "🍎 Drug–Food Interaction"])
+tab1, tab2 = st.tabs(
+    ["💊 Drug–Drug Interaction", "🍎 Drug–Food Interaction"]
+)
 
 # --------------------------------------------------------------------
 # التبويب الأول: تفاعلات الأدوية مع بعضها البعض
@@ -79,7 +95,7 @@ with tab1:
             drug_names,
             index=None,
             placeholder="Type drug name...",
-            key="dd_drug1"
+            key="dd_drug1",
         )
 
     with col2:
@@ -88,10 +104,12 @@ with tab1:
             drug_names,
             index=None,
             placeholder="Type drug name...",
-            key="dd_drug2"
+            key="dd_drug2",
         )
 
-    if st.button("Check Interaction", use_container_width=True, key="btn_dd_check"):
+    if st.button(
+        "Check Interaction", use_container_width=True, key="btn_dd_check"
+    ):
         if not drug1 or not drug2:
             st.warning("Please select both drugs.")
             st.stop()
@@ -104,47 +122,71 @@ with tab1:
         if row is None:
             st.success("✅ No interaction found.")
         else:
-            interaction_text = row["interaction_type"] if "interaction_type" in row.keys() else row["Interaction"]
+            interaction_text = (
+                row["interaction_type"]
+                if "interaction_type" in row.keys()
+                else row["Interaction"]
+            )
             report = build_report(interaction_text, drug1, drug2)
             render_report(report)
 
 
 # --------------------------------------------------------------------
-# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (مُحدثة ونظيفة بالكامل)
+# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (تم دمج كروت العرض الجديدة المحدثة)
 # --------------------------------------------------------------------
 with tab2:
     st.subheader("Drug–Food Interaction Checker")
-    
+
     # اختيار دواء واحد لفحص تفاعلاته الغذائية
     selected_food_drug = st.selectbox(
         "Select Drug",
         drug_names,
         index=None,
         placeholder="Type drug name...",
-        key="df_drug"
+        key="df_drug",
     )
-    
-    if st.button("Check Food Interaction", use_container_width=True, key="btn_df_check"):
+
+    if st.button(
+        "Check Food Interaction", use_container_width=True, key="btn_df_check"
+    ):
         if not selected_food_drug:
             st.warning("Please select a drug.")
             st.stop()
-            
+
         result = dfi_engine.find_interactions(selected_food_drug)
 
+        # --------------------------------------------------------------------
+        # استبدال وتحديث جزء عرض التفاعلات الغذائية بالكامل باستخدام الكارت السريري
+        # --------------------------------------------------------------------
         if result:
-            st.subheader(f"🥦 Drug–Food Interactions for {result.get('name', selected_food_drug)}")
+            st.subheader("🥗 Drug–Food Interactions")
 
+            # جلب مصفوفة التفاعلات بأمان
             interactions = result.get("food_interactions", [])
-            
+
             if isinstance(interactions, list) and interactions:
                 for interaction in interactions:
-                    st.warning(interaction)
-            elif isinstance(interactions, str):
-                st.warning(interactions)
+                    clinical_card(
+                        title="Drug–Food Interaction",
+                        message=interaction,
+                        category="Food Safety",
+                        recommendation="Follow the dietary advice above and consult a healthcare professional if needed.",
+                        reference=result.get(
+                            "reference", "No reference available."
+                        ),
+                    )
+            elif isinstance(interactions, str) and interactions:
+                # ميزة أمان إضافية في حال كان التفاعل نصاً واحداً وليس مصفوفة
+                clinical_card(
+                    title="Drug–Food Interaction",
+                    message=interactions,
+                    category="Food Safety",
+                    recommendation="Follow the dietary advice above and consult a healthcare professional if needed.",
+                    reference=result.get(
+                        "reference", "No reference available."
+                    ),
+                )
             else:
                 st.info("No explicit food interaction text details found.")
-
-            if result.get("reference"):
-                st.caption(f"**Reference:** {result['reference']}")
         else:
-            st.info(f"ℹ️ No specific food interactions found for '{selected_food_drug}' in the current database.")
+            st.success("✅ No specific food interactions found.")
