@@ -1,4 +1,5 @@
 import re
+import streamlit as st
 from utils.clinical_rules import RULES
 
 
@@ -23,9 +24,8 @@ def find_rule(text):
 
 def classify_severity(text):
     """
-    يصنف خطورة التفاعل كخيار احتياطي (Fallback) أو تصنيف سريع.
-    ملاحظة: دالة find_rule الآن تقوم بجلب الخطورة مباشرة من القواعد، 
-    ولكن تم الاحتفاظ بهذه الدالة للحفاظ على التوافق البرمجي.
+    ملاحظة: تم الاحتفاظ بهذه الدالة فقط كخيار احتياطي (Fallback) في الملف
+    إذا استدعتها ملفات أخرى، لكن الاعتماد الأساسي أصبح الآن على find_rule.
     """
     text = text.lower()
 
@@ -60,19 +60,64 @@ def classify_severity(text):
 
 def build_report(interaction_text, drug1, drug2):
     """
-    يبني التقرير السريري الكامل للتفاعل بين الدوائين بشكل ديناميكي ومبسط.
+    بناء التقرير السريري الكامل للتفاعل بين الدوائين بشكل ديناميكي مبسط
+    باستخدام قاموس القواعد الموحد بدون أي جمل شرطية معقدة.
     """
-    # تهيئة واستبدال الصيغ النصية التلقائية بأسماء الأدوية الفعلية
+    # 1. صياغة النص وإدراج أسماء الأدوية الحالية مكان علامات الاستبدال (.*)
     text = interaction_text.replace("(.*)", "{}")
     text = text.format(drug1, drug2)
 
-    # البحث عن تفاصيل القاعدة الطبية المطابقة بدلاً من استخدام عشرات جمل if
-    matched_rule = find_rule(text)
+    # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية
+    rule = find_rule(text)
 
+    # 3. إرجاع القاموس النهائي المهيكل لـ RxShield مباشرة
     return {
-        "severity": matched_rule["severity"],
+        "severity": rule["severity"],
         "interaction": text,
-        "mechanism": matched_rule["mechanism"],
-        "recommendation": matched_rule["recommendation"],
-        "monitoring": matched_rule["monitoring"],
+        "mechanism": rule["mechanism"],
+        "recommendation": rule["recommendation"],
+        "monitoring": rule["monitoring"],
     }
+
+
+def render_report(report):
+    """
+    يقوم برسم وعرض عناصر التقرير الطبي السريري بالكامل على واجهة تطبيق Streamlit 
+    بناءً على مستوى الخطورة والملاحظات الطبية المرفقة.
+    """
+    st.markdown("# 🛡️ RxShield Clinical Report")
+
+    st.error(report["severity"])
+
+    st.markdown("## 🧬 Clinical Effect")
+    st.info(report["interaction"])
+
+    st.markdown("## 📋 Recommendation")
+    st.success(report["recommendation"])
+
+    st.markdown("## ⚙️ Mechanism")
+    st.info(report["mechanism"])
+
+    st.markdown("## 🩺 Monitoring")
+    st.warning(report["monitoring"])
+
+    st.markdown("## 📚 Evidence")
+    st.caption("DrugBank Knowledge Base")
+
+    st.markdown("## ⚠️ Clinical Notes")
+
+    if "Critical" in report["severity"]:
+        st.error(
+            "This interaction may result in serious patient harm. "
+            "Evaluate risk versus benefit before co-administration."
+        )
+
+    elif "Moderate" in report["severity"]:
+        st.warning(
+            "The combination can usually be used with appropriate monitoring."
+        )
+
+    else:
+        st.success(
+            "No major precautions beyond routine monitoring."
+        )
