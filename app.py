@@ -162,6 +162,44 @@ with tab1:
                 st.markdown("**Monitoring**")
                 st.write(report["monitoring"])
 
+                render_report(report)
+
+                # =====================================================
+                # 💊 Drug Information
+                # =====================================================
+
+                st.divider()
+                st.subheader("💊 Drug Information")
+
+                drug_info = drug_info_engine.get_info(drug1)
+
+                if drug_info:
+
+                    st.markdown(f"### {drug_info.get('name','Unknown')}")
+
+                    if drug_info.get("description"):
+                        st.markdown("**Description**")
+                        st.write(drug_info["description"])
+
+                    if drug_info.get("indication"):
+                        st.markdown("**Indications**")
+                        st.write(drug_info["indication"])
+
+                    if drug_info.get("mechanism_of_action"):
+                        st.markdown("**Mechanism of Action**")
+                        st.write(drug_info["mechanism_of_action"])
+
+                    if drug_info.get("pharmacodynamics"):
+                        st.markdown("**Pharmacodynamics**")
+                        st.write(drug_info["pharmacodynamics"])
+
+                    if drug_info.get("toxicity"):
+                        st.markdown("**Toxicity**")
+                        st.write(drug_info["toxicity"])
+
+                else:
+                    st.info("No drug information available.")
+
 
 # --------------------------------------------------------------------
 # التبويب الثاني: تفاعلات الأدوية مع الأطعمة
