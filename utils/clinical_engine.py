@@ -172,11 +172,24 @@ def enhance_recommendation(report):
 def build_report(interaction_text, drug1, drug2):
     """
     بناء التقرير السريري الكامل للتفاعل بين الدوائين بشكل ديناميكي مبسط
-    مع ربط السمات السريرية وتعزيز التوصيات الطبية مباشرة.
+    مع معالجة آمنة للتنسيق ومنع أخطاء ValueError/KeyError.
     """
-    # 1. صياغة النص وإدراج أسماء الأدوية الحالية مكان علامات الاستبدال (.*)
-    text = interaction_text.replace("(.*)", "{}")
-    text = text.format(drug1, drug2)
+    if not interaction_text:
+        text = "No interaction text available."
+    else:
+        text = str(interaction_text)
+        # 🛠️ التعديل الآمن: استبدال الـ placeholders المرنة والأنماط المعقدة بدقة وبدون أخطاء .format()
+        text = text.replace("(.*)", "{}")
+        text = text.replace("{0}", drug1).replace("{1}", drug2)
+        text = text.replace("{drug1}", drug1).replace("{drug2}", drug2)
+        
+        # إذا كان النص يحتوي على {} جاهزة للتنسيق
+        if "{}" in text:
+            try:
+                text = text.format(drug1, drug2)
+            except (ValueError, KeyError, IndexError):
+                # حماية إضافية في حال احتوى النص الأصلي على أقواس مجعدة زائدة
+                text = text.replace("{}", drug1, 1).replace("{}", drug2, 1)
 
     # 2. استدعاء القاعدة المطابقة ديناميكياً بناءً على الكلمات المفتاحية
     rule = find_rule(text)
@@ -184,7 +197,7 @@ def build_report(interaction_text, drug1, drug2):
     # 3. استخراج المظهر والنوع والإنزيمات سريرياً (احتياطي للبيانات القديمة)
     features = extract_clinical_features(text)
 
-    # 4. صياغة القاموس الأولي للتقرير بناءً على التعديل الجديد المطلوب
+    # 4. صياغة القاموس الأولي للتقرير
     report = {
         "severity": rule["severity"],
         "interaction": text,
@@ -220,7 +233,7 @@ def render_report(report):
     st.markdown("## 🧬 Clinical Effect")
     st.info(report["interaction"])
 
-    # التعديل الجديد: إدراج حقول الـ Interpretation و Interaction Type مباشرة بعد الـ Clinical Effect
+    # إدراج حقول الـ Interpretation و Interaction Type مباشرة بعد الـ Clinical Effect
     st.markdown("## Clinical Interpretation")
     st.success(report["interpretation"])
 
