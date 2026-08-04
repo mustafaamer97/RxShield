@@ -1,18 +1,19 @@
 import os
 import sys
 
-# 🛠️ ضبط مسار الجذر ومجلد engine لضمان الاستيراد بدون أخطاء
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.join(BASE_DIR, "engine"))
+ENGINE_DIR = os.path.join(BASE_DIR, "engine")
+
+if ENGINE_DIR not in sys.path:
+    sys.path.insert(0, ENGINE_DIR)
 
 import json
 import pandas as pd
 import streamlit as st
 from database.db import get_connection, get_interaction
 
-# 📥 استيراد محرك معلومات الأدوية عبر المجلد المباشر
-from engine.drug_info_engine import DrugInfoEngine
+# 📥 استيراد محرك معلومات الأدوية مباشرة من مجلد engine
+from drug_info_engine import DrugInfoEngine
 
 # 📥 استيراد الواجهة والمحرك الإكلينيكي
 from ui.cards import clinical_card
