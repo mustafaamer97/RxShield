@@ -2,10 +2,15 @@ import json
 import pandas as pd
 import streamlit as st
 from database.db import get_connection, get_interaction
+# 📥 استيراد محرك معلومات الأدوية الجديد
+from engine.drug_info_engine import DrugInfoEngine
 # 📥 استيراد الكارت السريري 
 from ui.cards import clinical_card
 # استيراد الدالتين معاً من المحرك الإكلينيكي
 from utils.clinical_engine import build_report, render_report
+
+# تهيئة محرك معلومات الأدوية
+drug_info_engine = DrugInfoEngine()
 
 
 class DrugFoodInteractionEngine:
@@ -45,7 +50,7 @@ class DrugFoodInteractionEngine:
         return None
 
 
-# تهيئة المحرك
+# تهيئة محرك التفاعلات الغذائية
 dfi_engine = DrugFoodInteractionEngine()
 
 st.set_page_config(page_title="RxShield", page_icon="🛡️", layout="wide")
@@ -150,7 +155,7 @@ with tab1:
 
 
 # --------------------------------------------------------------------
-# التبويب الثاني: تفاعلات الأدوية مع الأطعمة (تم تحديث الاستدعاء المباشر)
+# التبويب الثاني: تفاعلات الأدوية مع الأطعمة
 # --------------------------------------------------------------------
 with tab2:
     st.subheader("Drug–Food Interaction Checker")
@@ -180,7 +185,7 @@ with tab2:
             # التأكد من تحويل النص إلى قائمة إذا كان نصاً مفرداً لتجنب الأخطاء البرمجية
             food_items = raw_interactions if isinstance(raw_interactions, list) else [raw_interactions]
 
-            # ✨ الاستدعاء النظيف والمباشر الذي طلبته تماماً
+            # الاستدعاء المباشر النظيف
             clinical_card(
                 title="Drug–Food Interaction Report",
                 category="Food Safety",
