@@ -11,8 +11,8 @@ import pandas as pd
 import streamlit as st
 from database.db import get_connection, get_interaction
 
-# 📥 استيراد محرك معلومات الأدوية بشكل مباشر وآمن
-from drug_info_engine import DrugInfoEngine
+# 📥 استيراد محرك معلومات الأدوية عبر المجلد المباشر
+from engine.drug_info_engine import DrugInfoEngine
 
 # 📥 استيراد الواجهة والمحرك الإكلينيكي
 from ui.cards import clinical_card
