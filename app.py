@@ -1,12 +1,21 @@
+import os
+import sys
+
+# 🛠️ ضبط مسار الجذر ومجلد engine لضمان الاستيراد بدون أخطاء
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+sys.path.append(os.path.join(BASE_DIR, "engine"))
+
 import json
 import pandas as pd
 import streamlit as st
 from database.db import get_connection, get_interaction
-# 📥 استيراد محرك معلومات الأدوية الجديد
-from engine.drug_info_engine import DrugInfoEngine
-# 📥 استيراد الكارت السريري 
+
+# 📥 استيراد محرك معلومات الأدوية بشكل مباشر وآمن
+from drug_info_engine import DrugInfoEngine
+
+# 📥 استيراد الواجهة والمحرك الإكلينيكي
 from ui.cards import clinical_card
-# استيراد الدالتين معاً من المحرك الإكلينيكي
 from utils.clinical_engine import build_report, render_report
 
 # تهيئة محرك معلومات الأدوية
@@ -32,7 +41,7 @@ class DrugFoodInteractionEngine:
 
         # تنظيف وتحويل نص البحث لحروف صغيرة
         query = drug_name.strip().casefold()
-        # استخراج الكلمة الأولى من اسم الدواء للبحث المرن (مثال: Warfarin Sodium تصبح warfarin)
+        # استخراج الكلمة الأولى من اسم الدواء للبحث المرن
         query_first_word = query.split()[0] if query.split() else query
 
         for item in self.food_db:
@@ -57,7 +66,7 @@ st.set_page_config(page_title="RxShield", page_icon="🛡️", layout="wide")
 
 st.title("🛡️ RxShield")
 
-# تحميل ملف الأدوية المفلتر الجديد
+# تحميل ملف الأدوية المفلتر
 drug_lookup = pd.read_csv("drug_lookup.csv")
 
 # جلب المعرفات الفريدة من قاعدة البيانات
@@ -132,11 +141,11 @@ with tab1:
                 if "interaction_type" in row.keys()
                 else row["Interaction"]
             )
-            
+
             # بناء التقرير
             report = build_report(interaction_text, drug1, drug2)
-            
-            # تمرير النص داخل قائمة [ ] ليتوافق مع حقل items في الدالة المتوفرة لديك
+
+            # عرض التقرير في الكارت السريري
             clinical_card(
                 title="Drug–Drug Interaction Report",
                 category=report["severity"],
@@ -144,12 +153,12 @@ with tab1:
                 recommendation=report["recommendation"],
                 reference="DrugBank Knowledge Base",
             )
-            
-            # إضافة قائمة التفاصيل الممتدة السريرية بعد البطاقة مباشرة
+
+            # قائمة التفاصيل السريرية الممتدة
             with st.expander("🩺 Clinical Details"):
                 st.markdown("**Mechanism**")
                 st.write(report["mechanism"])
-                
+
                 st.markdown("**Monitoring**")
                 st.write(report["monitoring"])
 
@@ -160,7 +169,6 @@ with tab1:
 with tab2:
     st.subheader("Drug–Food Interaction Checker")
 
-    # اختيار دواء واحد لفحص تفاعلاته الغذائية
     selected_food_drug = st.selectbox(
         "Select Drug",
         drug_names,
@@ -179,13 +187,13 @@ with tab2:
         result = dfi_engine.find_interactions(selected_food_drug)
 
         if result:
-            # جلب مصفوفة التفاعلات بأمان
             raw_interactions = result.get("food_interactions", [])
-            
-            # التأكد من تحويل النص إلى قائمة إذا كان نصاً مفرداً لتجنب الأخطاء البرمجية
-            food_items = raw_interactions if isinstance(raw_interactions, list) else [raw_interactions]
+            food_items = (
+                raw_interactions
+                if isinstance(raw_interactions, list)
+                else [raw_interactions]
+            )
 
-            # الاستدعاء المباشر النظيف
             clinical_card(
                 title="Drug–Food Interaction Report",
                 category="Food Safety",
