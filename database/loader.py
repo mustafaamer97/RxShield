@@ -6,14 +6,28 @@ ID_TO_NAME = {}
 DRUGS = {}
 
 
+def load_drug_info():
+    """تحميل بيانات الأدوية مباشرة من مسار قاعدة البيانات"""
+    try:
+        with open(
+            "database/drug_info.json",
+            "r",
+            encoding="utf-8"
+        ) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print("خطأ: لم يتم العثور على ملف database/drug_info.json")
+        return {}
+
+
 def load_drug_data():
     """تحميل بيانات الأدوية وبناء قواميس البحث السريع"""
     global DRUGS, NAME_TO_ID, ID_TO_NAME
 
-    try:
-        with open("drug_info.json", "r", encoding="utf-8") as f:
-            DRUGS = json.load(f)
+    # استخدام الدالة المضافة للتحميل من المسار الجديد
+    DRUGS = load_drug_info()
 
+    if DRUGS:
         # بناء القواميس لتسهيل عملية البحث
         for drug_id, info in DRUGS.items():
             name = info.get("name", "").strip()
@@ -24,9 +38,6 @@ def load_drug_data():
         print("تم تحميل بيانات الأدوية بنجاح.")
         # طباعة العنصر الأول للتأكد من بنية الملف
         print("عينة من البيانات:", next(iter(DRUGS.items())))
-
-    except FileNotFoundError:
-        print("خطأ: لم يتم العثور على ملف drug_info.json")
 
 
 def load_food_interactions():
