@@ -21,9 +21,6 @@ from utils.clinical_engine import build_report, render_report
 # تهيئة محرك معلومات الأدوية
 drug_info_engine = DrugInfoEngine()
 
-# 🔍 اختبار تجريبي لجلب معلومات دواء Warfarin
-st.write(drug_info_engine.get_info("Warfarin"))
-
 
 class DrugFoodInteractionEngine:
 
@@ -174,7 +171,7 @@ with tab1:
                 st.divider()
                 st.subheader("💊 Drug Information")
 
-                drug_info = drug_info_engine.get_info(drug1)
+                drug_info = drug_info_engine.get_info_by_id(drug1_id)
 
                 if drug_info:
 
