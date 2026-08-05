@@ -21,6 +21,11 @@ from utils.clinical_engine import build_report, render_report
 # تهيئة محرك معلومات الأدوية
 drug_info_engine = DrugInfoEngine()
 
+# 🔍 طباعة التشخيص المؤقتة
+st.write(type(drug_info_engine.drugs))
+st.write(len(drug_info_engine.drugs))
+st.write(next(iter(drug_info_engine.drugs.items())))
+
 
 class DrugFoodInteractionEngine:
 
