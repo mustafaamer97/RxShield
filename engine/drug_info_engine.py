@@ -1,29 +1,21 @@
-from database.loader import load_drug_info
+from database.loader import DRUGS, NAME_TO_ID
 
 
 class DrugInfoEngine:
-    def __init__(self):
-        self.drugs = load_drug_info()
 
-    def get_info(self, drug_name: str):
-        """
-        Returns full drug information from drug_info.json
-        """
+    def __init__(self):
+        self.drugs = DRUGS
+
+    def get_info(self, drug_name):
 
         if not drug_name:
             return None
 
-        query = drug_name.strip().casefold()
+        query = drug_name.strip().lower()
 
-        for drug in self.drugs:
+        drug_id = NAME_TO_ID.get(query)
 
-            name = drug.get("name", "").strip().casefold()
-
-            if name == query:
-                return drug
-
-            # Flexible matching
-            if query in name or name in query:
-                return drug
+        if drug_id:
+            return self.drugs.get(drug_id)
 
         return None
