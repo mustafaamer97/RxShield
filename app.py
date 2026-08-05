@@ -171,11 +171,6 @@ with tab1:
                 st.divider()
                 st.subheader("💊 Drug Information")
 
-                # 🔍 أسطر التشخيص المؤقتة
-                st.write("Drug1 ID:", drug1_id)
-                st.write("Number of drugs:", len(drug_info_engine.drugs))
-                st.write("Contains ID:", drug1_id in drug_info_engine.drugs)
-
                 drug_info = drug_info_engine.get_info_by_id(drug1_id)
 
                 if drug_info:
