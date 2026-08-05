@@ -1,4 +1,5 @@
 import json
+import os
 
 # قواميس البحث الفوري (Global Dictionaries)
 NAME_TO_ID = {}
@@ -7,16 +8,21 @@ DRUGS = {}
 
 
 def load_drug_info():
-    """تحميل بيانات الأدوية مباشرة من مسار قاعدة البيانات"""
+    """
+    Load drug_info.json from the project root.
+    """
+
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "drug_info.json",
+    )
+
     try:
-        with open(
-            "database/drug_info.json",
-            "r",
-            encoding="utf-8"
-        ) as f:
+        with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except FileNotFoundError:
-        print("خطأ: لم يتم العثور على ملف database/drug_info.json")
+
+    except Exception as e:
+        print("Drug Info Error:", e)
         return {}
 
 
