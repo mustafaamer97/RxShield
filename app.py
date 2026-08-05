@@ -21,10 +21,14 @@ from utils.clinical_engine import build_report, render_report
 # تهيئة محرك معلومات الأدوية
 drug_info_engine = DrugInfoEngine()
 
-# 🔍 طباعة التشخيص المؤقتة
-st.write(type(drug_info_engine.drugs))
-st.write(len(drug_info_engine.drugs))
-st.write(next(iter(drug_info_engine.drugs.items())))
+# 🔍 تشخيص محرك معلومات الأدوية
+st.write("Number of drugs:", len(drug_info_engine.drugs))
+
+first_key = next(iter(drug_info_engine.drugs))
+st.write("First key:", first_key)
+
+st.write("First record:")
+st.json(drug_info_engine.drugs[first_key])
 
 
 class DrugFoodInteractionEngine:
