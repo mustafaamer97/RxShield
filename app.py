@@ -309,3 +309,34 @@ with tab3:
                 recommendation=report["recommendation"],
                 reference="DrugBank",
             )
+
+        # =====================================================
+        # 🥗 Food Alerts
+        # =====================================================
+
+        st.divider()
+        st.subheader("🥗 Food Alerts")
+
+        food_found = False
+
+        for drug in selected_drugs:
+
+            food_result = dfi_engine.find_interactions(drug)
+
+            if not food_result:
+                continue
+
+            food_found = True
+
+            st.markdown(f"### 💊 {drug}")
+
+            interactions = food_result.get("food_interactions", [])
+
+            for i, advice in enumerate(interactions, start=1):
+                st.markdown(f"{i}. {advice}")
+
+        if not food_found:
+            st.info("No food interactions were found for the selected regimen.")
+
+        else:
+            st.caption("📚 Source: DrugBank 6.0")
