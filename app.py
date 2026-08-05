@@ -91,8 +91,12 @@ st.success(f"Loaded {len(drug_names)} valid RxShield drugs")
 # ====================================================================
 # ✨ التبويبات الرسمية والتطبيق المستقر
 # ====================================================================
-tab1, tab2 = st.tabs(
-    ["💊 Drug–Drug Interaction", "🍎 Drug–Food Interaction"]
+tab1, tab2, tab3 = st.tabs(
+    [
+        "💊 Drug–Drug Interaction",
+        "🍎 Drug–Food Interaction",
+        "👥 Patient Regimen Analyzer",
+    ]
 )
 
 # --------------------------------------------------------------------
@@ -241,3 +245,67 @@ with tab2:
             )
         else:
             st.success("✅ No specific food interactions found.")
+
+
+# =====================================================
+# 👥 Patient Regimen Analyzer
+# =====================================================
+
+with tab3:
+
+    st.subheader("👥 Patient Regimen Analyzer")
+
+    selected_drugs = st.multiselect(
+        "Select Patient Medications",
+        drug_names,
+        placeholder="Choose two or more medications...",
+    )
+
+    if st.button(
+        "Analyze Regimen",
+        use_container_width=True,
+        key="analyze_regimen",
+    ):
+
+        if len(selected_drugs) < 2:
+            st.warning("Please select at least two medications.")
+            st.stop()
+
+        import itertools
+
+        pairs = list(itertools.combinations(selected_drugs, 2))
+
+        st.success(
+            f"Analyzing {len(selected_drugs)} drugs "
+            f"({len(pairs)} interaction pairs)"
+        )
+
+        for drug1, drug2 in pairs:
+
+            drug1_id = NAME_TO_ID[drug1]
+            drug2_id = NAME_TO_ID[drug2]
+
+            row = get_interaction(drug1_id, drug2_id)
+
+            if row is None:
+                continue
+
+            interaction_text = (
+                row["interaction_type"]
+                if "interaction_type" in row.keys()
+                else row["Interaction"]
+            )
+
+            report = build_report(
+                interaction_text,
+                drug1,
+                drug2,
+            )
+
+            clinical_card(
+                title=f"{drug1} ↔ {drug2}",
+                category=report["severity"],
+                items=[report["interaction"]],
+                recommendation=report["recommendation"],
+                reference="DrugBank",
+            )
